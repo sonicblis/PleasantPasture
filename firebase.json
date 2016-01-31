@@ -1,5 +1,5 @@
 {
-  "firebase": "firebaseappname",
+  "firebase": "PleasantPasture",
   "public": ".",
   "ignore": [
     "app/**/*.js",

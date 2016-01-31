@@ -1,4 +1,4 @@
-var app = angular.module('angularApp', ['firebase']);
+var app = angular.module('pleasantPastureApp', ['firebase']);
 app.run(['logProvider', function(logProvider){
     logProvider.setLoggingLevels({
         warn: true,
