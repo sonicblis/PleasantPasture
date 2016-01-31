@@ -1,0 +1,12 @@
+{
+  "firebase": "firebaseappname",
+  "public": ".",
+  "ignore": [
+    "app/**/*.js",
+    "app/**/*.less",
+    "firebase.json",
+    "**/.*",
+    "**/node_modules/**",
+    "thirdParty/**"
+  ]
+}
