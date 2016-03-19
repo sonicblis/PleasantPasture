@@ -1,0 +1,115 @@
+body {
+  margin: 0;
+  background: #ccc;
+  font-family: Tahoma;
+  font-size: 10pt;
+}
+h2 {
+  color: #6b9853;
+  margin-top: 0;
+  border: solid 1px #ccc;
+  padding-left: 5px;
+  padding-right: 5px;
+  background: #efefef;
+  margin-bottom: 10px;
+}
+.centered {
+  text-align: center;
+}
+.left {
+  float: left;
+}
+.formrow {
+  height: 24px;
+  overflow: hidden;
+}
+.formlabel {
+  width: 55px;
+  text-align: right;
+  float: left;
+  line-height: 19px;
+  height: 19px;
+}
+.formfield input,
+.formfield textarea {
+  border: solid 1px #aaa;
+}
+.formfield {
+  padding: 0;
+  margin: 0;
+}
+input,
+textarea {
+  padding: 1px;
+  margin: 0;
+  margin-left: 2px;
+}
+.border {
+  border: solid 1px #aaa;
+}
+.right {
+  float: right;
+}
+.centered {
+  text-align: center;
+}
+.maincontent {
+  border: solid 1px #777;
+}
+.product {
+  float: left;
+  border: solid 1px #777;
+  margin: 10px;
+  background: white;
+  color: #777;
+  width: 230px;
+}
+.productcontent {
+  padding: 5px;
+  padding-top: 0;
+}
+.productmore {
+  background: #ddd;
+  text-align: right;
+  font-weight: bold;
+  padding: 5px;
+}
+.arrows {
+  font-weight: normal;
+  font-size: 8pt;
+  font-family: tahoma;
+}
+div {
+  overflow: auto;
+}
+.content {
+  padding: 10px;
+}
+.footer {
+  background: #eee;
+  padding: 10px;
+  border-top: #682e04;
+  text-align: center;
+}
+.clickable {
+  cursor: pointer;
+}
+.fakelink {
+  text-decoration: underline;
+  color: blue;
+  cursor: pointer;
+}
+.fakebutton {
+  background: #ccc;
+  border: solid 1px #666;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 10px;
+  padding-right: 10px;
+  margin-top: 2px;
+}
+.line {
+  border: solid 1px #999;
+}
+
+
