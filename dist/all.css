@@ -1,16 +1,15 @@
 body {
   margin: 0;
   background: #ccc;
-  font-family: Tahoma;
+  font-family: 'open sans';
   font-size: 10pt;
 }
 h2 {
-  color: #6b9853;
+  color: #ed7908;
   margin-top: 0;
-  border: solid 1px #ccc;
+  border-bottom: solid 1px #ccc;
   padding-left: 5px;
   padding-right: 5px;
-  background: #efefef;
   margin-bottom: 10px;
 }
 .centered {
@@ -27,12 +26,14 @@ h2 {
   width: 60px;
   text-align: right;
   float: left;
-  line-height: 19px;
-  height: 19px;
+  line-height: 22px;
+  height: 23px;
+  overflow: visible;
 }
 .formfield input,
 .formfield textarea {
   border: solid 1px #aaa;
+  padding: 3px;
 }
 .formfield input[type='checkbox'] {
   margin-top: 2px;
@@ -64,7 +65,7 @@ textarea {
 }
 .product {
   float: left;
-  border: solid 1px #777;
+  border: solid 1px #aaa;
   margin: 10px;
   background: white;
   color: #777;
@@ -119,3 +120,52 @@ div {
 }
 
 
+#main span,
+#main a,
+#main li,
+#main p {
+  font-family: 'open sans';
+  font-size: 11pt;
+}
+#main a {
+  color: #0b97c4;
+  text-decoration: none;
+}
+#main a:hover {
+  text-decoration: underline;
+}
+#sideBar {
+  font-family: 'open sans';
+  font-size: 10pt;
+}
+testimonials {
+  display: block;
+  overflow: auto;
+}
+testimonials h2 {
+  text-align: center;
+}
+testimonials div {
+  margin-bottom: 10px;
+}
+testimonials div comment {
+  display: block;
+}
+testimonials div comment:before {
+  content: '"';
+}
+testimonials div comment:after {
+  content: '"';
+}
+testimonials div author {
+  display: block;
+  float: right;
+  clear: both;
+  color: #888;
+}
+testimonials div author:before {
+  content: '- ';
+}
+footer {
+  border-top: solid 1px #ccc;
+}

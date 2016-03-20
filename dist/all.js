@@ -13,6 +13,7 @@ app.constant('firebase', {
 	root: new Firebase(baseUrl),
 	people: new Firebase(baseUrl + "/people"),
 	contacts: new Firebase(baseUrl + "/contacts"),
+	testimonials: new Firebase(baseUrl + "/testimonials"),
 	events: {
 		valueChanged: 'value',
 		childAdded: 'child_added',
@@ -96,6 +97,16 @@ app.controller('peopleController', ['$scope', 'peopleProvider', '$rootScope', 'a
         }
     });
 }]);
+app.directive("testimonials", [function () {
+	return {
+		restrict: '',
+		templateUrl: 'app/testimonials/testimonials.html',
+		controller: ['$scope','firebase','firebaseArrayWatcher', function ($scope, firebase, firebaseArrayWatcher) {
+			$scope.testimonials = firebaseArrayWatcher.getWatcher(firebase.testimonials.orderByChild('product').equalTo('soap'));
+		}]
+	}
+}]);
+
 app.directive("contactForm", [function () {
 	return {
 		restrict: 'E',

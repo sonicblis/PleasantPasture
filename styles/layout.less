@@ -1,0 +1,58 @@
+#main {
+  span, a, li, p {
+    font-family: 'open sans';
+    font-size: 11pt;
+  }
+
+  a {
+    color: #0b97c4;
+    text-decoration: none;
+
+    &:hover{
+      text-decoration: underline;
+    }
+  }
+}
+
+#sideBar{
+  font-family: 'open sans';
+  font-size: 10pt;
+}
+
+testimonials{
+  display: block;
+  overflow: auto;
+
+  h2{
+    text-align: center;
+  }
+
+  div {
+    margin-bottom: 10px;
+
+    comment {
+      display: block;
+
+      &:before {
+        content: '"';
+      }
+      &:after {
+        content: '"';
+      }
+    }
+
+    author {
+      display: block;
+      float: right;
+      clear: both;
+      color: #888;
+      &:before {
+        content: '- ';
+      }
+    }
+  }
+}
+
+footer{
+  border-top: solid 1px #ccc;
+}
