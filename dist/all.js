@@ -1,4 +1,4 @@
-var app = angular.module('pleasantPastureApp', ['firebase']);
+var app = angular.module('pleasantPastureApp', ['firebase', 'ui.router']);
 app.run(['logProvider', function(logProvider){
     logProvider.setLoggingLevels({
         warn: true,
@@ -7,41 +7,79 @@ app.run(['logProvider', function(logProvider){
         info: true
     });
 }]);
-var baseUrl = "pleasantpasture.firebase.io";
+var baseUrl = "pleasantpasture.firebaseio.com";
 
 app.constant('firebase', {
-    root: new Firebase(baseUrl),
-    people: new Firebase(baseUrl + "/people"),
-    events: {
-        valueChanged: 'value',
-        childAdded: 'child_added',
-        childRemoved: 'child_removed'
-    },
-    getCurrentTime: function() { return Firebase.ServerValue.TIMESTAMP; },
-    stringify: function(firebaseObj){
-        var path = firebaseObj.toString().replace(firebaseObj.root(), ''); //trims the root url from the path
-        for (var i in arguments){
-            if (arguments[i] != firebaseObj){
-                path += '/' + arguments[i];
-            }
-        }
-        return decodeURIComponent(path);
-    },
-    cleanAngularObject: function(object){
-        if (angular){
-            var tempObj = angular.fromJson(angular.toJson(object)); //cleans off all $$hashkey values from child collections
-            for (n in tempObj){
-                if (n.substring(0,1) == '$'){
-                    delete tempObj[n];
-                }
-            }
-            return tempObj;
-        }
-        else{
-            console.error("Angular is not available to use to clean the angular object.  This method doesn't need to be called in this context.");
-        }
-    }
+	root: new Firebase(baseUrl),
+	people: new Firebase(baseUrl + "/people"),
+	contacts: new Firebase(baseUrl + "/contacts"),
+	events: {
+		valueChanged: 'value',
+		childAdded: 'child_added',
+		childRemoved: 'child_removed'
+	},
+	getCurrentTime: function () {
+		return Firebase.ServerValue.TIMESTAMP;
+	},
+	stringify: function (firebaseObj) {
+		var path = firebaseObj.toString().replace(firebaseObj.root(), ''); //trims the root url from the path
+		for (var i in arguments) {
+			if (arguments[i] != firebaseObj) {
+				path += '/' + arguments[i];
+			}
+		}
+		return decodeURIComponent(path);
+	},
+	cleanAngularObject: function (object) {
+		if (angular) {
+			var tempObj = angular.fromJson(angular.toJson(object)); //cleans off all $$hashkey values from child collections
+			for (n in tempObj) {
+				if (n.substring(0, 1) == '$') {
+					delete tempObj[n];
+				}
+			}
+			return tempObj;
+		}
+		else {
+			console.error("Angular is not available to use to clean the angular object.  This method doesn't need to be called in this context.");
+		}
+	}
 });
+app.config(function($stateProvider, $urlRouterProvider) {
+	//
+	// For any unmatched url, redirect to /state1
+	$urlRouterProvider.otherwise("/");
+	//
+	// Now set up the states
+	$stateProvider
+		.state('home', {
+			url: "/",
+			templateUrl: "app/home/home.html"
+		})
+		.state('eggs', {
+			url: "/eggs",
+			templateUrl: "app/eggs/eggInfo.html",
+		})
+		.state('soap', {
+			url: "/soap",
+			templateUrl: "app/Soap/SoapInfo.html"
+		})
+		.state('chicken', {
+			url: "/chicken",
+			templateUrl: "app/chicken/chicken.html"
+		})
+		.state('map', {
+			url: "/map",
+			templateUrl: "app/map/map.html"
+		})
+});
+app.directive("nav", [function () {
+	return {
+		restrict: 'E',
+		templateUrl: 'app/nav/nav.html',
+		controller: ['$scope', function($scope){}]
+	}
+}]);
 app.controller('peopleController', ['$scope', 'peopleProvider', '$rootScope', 'activityProvider', 'logProvider', function ($scope, peopleProvider, $rootScope, activityProvider, logProvider) {
     $scope.people = peopleProvider.people;
     $scope.registerUser = peopleProvider.registerUser;
@@ -57,6 +95,22 @@ app.controller('peopleController', ['$scope', 'peopleProvider', '$rootScope', 'a
             $rootScope.selectedPerson = $scope.people[0];
         }
     });
+}]);
+app.directive("contactForm", [function () {
+	return {
+		restrict: 'E',
+		templateUrl: 'app/forms/contact/contactForm.html',
+		controller: ['$scope','firebase', function ($scope, firebase) {
+			$scope.saved = false;
+			$scope.contact = {};
+			$scope.saveContact = function(){
+				firebase.contacts.push($scope.contact, function(){
+					$scope.saved = true;
+					$scope.$digest();
+				});
+			};
+		}]
+	}
 }]);
 app.directive('focusWhen', function($timeout, $parse) {
     return {
@@ -178,4 +232,13 @@ app.service('peopleProvider', ['$q', 'firebase', 'firebaseArrayWatcher', 'logPro
             }
         });
     }
+}]);
+app.directive("map", [function () {
+	return {
+		restrict: 'E',
+		templateUrl: 'app/global/content/map/map.html',
+		controller: ['$scope', function ($scope) {
+
+		}]
+	}
 }]);

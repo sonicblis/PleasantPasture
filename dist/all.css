@@ -24,7 +24,7 @@ h2 {
   overflow: hidden;
 }
 .formlabel {
-  width: 55px;
+  width: 60px;
   text-align: right;
   float: left;
   line-height: 19px;
@@ -33,6 +33,12 @@ h2 {
 .formfield input,
 .formfield textarea {
   border: solid 1px #aaa;
+}
+.formfield input[type='checkbox'] {
+  margin-top: 2px;
+}
+.formfield label {
+  vertical-align: top;
 }
 .formfield {
   padding: 0;

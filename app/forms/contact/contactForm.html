@@ -1,0 +1,50 @@
+<div class="centered">
+	<h2>Contact Us</h2>
+</div>
+<form name="contactForm" ng-submit="saveContact()" id="contactForm" style="height: 320px;" ng-show="saved == false">
+	We love to hear from people with questions, suggestions, or who just happen to share our passion.  Feel free to send us a quick message.<br /><br />
+	<div class="formrow">
+		<div class="formlabel">
+			Name:
+		</div>
+		<div class="formfield">
+			<input type="text" required ng-model="contact.name" name="Name" />
+		</div>
+	</div>
+	<div class="formrow">
+		<div class="formlabel">
+			E-mail:
+		</div>
+		<div class="formfield">
+			<input type="email" pattern=".+@.+\..+" required ng-model="contact.email" name="From" />
+		</div>
+	</div>
+	<div class="formlabel">
+		Interests:
+	</div>
+	<div class="formfield" style="margin: 4px 0 5px 4px; padding-left: 5px;">
+		<div style="width: 80px;" class="left"><input id="eggs" type="checkbox" ng-model="contact.interests.eggs" name="eggs" /> <label for="eggs">Eggs</label></div>
+		<input id="chicken" type="checkbox" ng-model="contact.interests.chicken" name="chicken" />  <label for="chicken">Chicken</label><br />
+		<div style="width: 80px;" class="left"><input ng-model="contact.interests.turkey" id="turkey" type="checkbox" name="turkey" />  <label for="turkey">Turkey</label></div>
+		<input id="goatherdshares" type="checkbox" ng-model="contact.interests.goatMilkSoap" name="goatMilkSoap" /> <label for="goatherdshares">Goat Milk Soap</label><br />
+		<input id="cowherdshares" type="checkbox" ng-model="contact.interests.cowShare" name="cowShare" /> <label for="cowherdshares">Cow Herd Shares</label><br />
+	</div>
+	<div class="formlabel">
+		Message:
+	</div>
+	<div class="formfield" style="margin-bottom: 5px;">
+		<textarea name="Message" ng-model="contact.message" rows="6" cols="25"></textarea>
+	</div>
+	<div class="formlabel">
+
+	</div>
+	<div class="formfield" style="margin-bottom: 5px;">
+		<input id="subscribe" type="checkbox" ng-model="contact.subscriber" name="subscribe" />  <label for="subscribe">Subscribe to newsletter</label><br />
+	</div>
+	<div style="margin-left: 60px;">
+		<input type="submit" id="submit" value="Send" style="padding: 4px 10px; border: solid 1px #aaa;">
+	</div>
+</form>
+<div ng-show="saved == true" style="height: 320px;">
+	Thanks for your interest, we'll be in touch!
+</div>
