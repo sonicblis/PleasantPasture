@@ -35,6 +35,18 @@
 					url: '/app',
 					template: '<console></console>'
 				})
+				.state('app.orders', {
+					url: '/orders',
+					template: '<orders></orders>'
+				})
+				.state('app.inventory', {
+					url: '/inventory',
+					template: '<inventory></inventory>'
+				})
+				.state('app.customers', {
+					url: '/customers',
+					template: '<customers></customers>'
+				})
 		}]);
 	}
 )(angular);

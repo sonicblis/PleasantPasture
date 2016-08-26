@@ -169,3 +169,42 @@ testimonials div author:before {
 footer {
   border-top: solid 1px #ccc;
 }
+
+console {
+  margin: 15px;
+  display: block;
+  overflow: auto;
+}
+console .tabs {
+  padding-top: 5px;
+  position: absolute;
+}
+console a {
+  border: 1px solid transparent;
+  border-top-width: 6px;
+  border-bottom-color: #518ccc;
+  text-decoration: none;
+  padding: 0 15px 8px 15px;
+  margin-top: 6px;
+  display: inline-block;
+  background: #c5c5c5;
+}
+console a:active {
+  color: black;
+}
+console a.active {
+  border-radius: 4px 4px 0 0;
+  margin-top: 0;
+  border: 1px solid #518ccc;
+  border-top-width: 6px;
+  border-bottom-color: white;
+  padding: 6px 15px 8px 15px;
+  background: white;
+}
+console ui-view {
+  margin-top: 43px;
+  background: white;
+  border: solid 1px #518ccc;
+  display: block;
+  padding: 15px;
+}

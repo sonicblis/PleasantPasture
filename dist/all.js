@@ -96,6 +96,18 @@
 					url: '/app',
 					template: '<console></console>'
 				})
+				.state('app.orders', {
+					url: '/orders',
+					template: '<orders></orders>'
+				})
+				.state('app.inventory', {
+					url: '/inventory',
+					template: '<inventory></inventory>'
+				})
+				.state('app.customers', {
+					url: '/customers',
+					template: '<customers></customers>'
+				})
 		}]);
 	}
 )(angular);
@@ -143,20 +155,24 @@
 		}]);
 })();
 
-(function(){
-	'use strict';
-
+(function () {
 	angular.module('pleasantPastureApp')
-		.component('console', {
-			templateUrl: 'app/components/console/console.html',
-			controller: 'ConsoleController',
-			controllerAs: 'console'
-		})
-		.controller('ConsoleController', function(){
-			var ctrl = this;
-
-			ctrl.title = 'Console';
-		});
+		.directive("contactForm", [function () {
+			return {
+				restrict: 'E',
+				templateUrl: 'app/forms/contact/contactForm.html',
+				controller: ['$scope', 'firebase', function ($scope, firebase) {
+					$scope.saved = false;
+					$scope.contact = {};
+					$scope.saveContact = function () {
+						firebase.contacts.push($scope.contact, function () {
+							$scope.saved = true;
+							$scope.$digest();
+						});
+					};
+				}]
+			}
+		}]);
 })();
 (function () {
 	angular.module('pleasantPastureApp')
@@ -190,25 +206,33 @@
 			};
 		});
 })();
+(function(){
+	'use strict';
+
+	angular.module('pleasantPastureApp')
+		.component('console', {
+			templateUrl: 'app/components/console/console.html',
+			controller: 'ConsoleController',
+			controllerAs: 'console'
+		})
+		.controller('ConsoleController', function(){
+			var ctrl = this;
+
+			ctrl.title = 'Console';
+		});
+})();
 (function () {
 	angular.module('pleasantPastureApp')
-		.directive("contactForm", [function () {
-			return {
-				restrict: 'E',
-				templateUrl: 'app/forms/contact/contactForm.html',
-				controller: ['$scope', 'firebase', function ($scope, firebase) {
-					$scope.saved = false;
-					$scope.contact = {};
-					$scope.saveContact = function () {
-						firebase.contacts.push($scope.contact, function () {
-							$scope.saved = true;
-							$scope.$digest();
-						});
-					};
-				}]
-			}
-		}]);
+		.component('customers', {
+			templateUrl: 'app/components/customers/customers.html',
+			controller: CustomersController,
+			controllerAs: 'customersController'
+		});
 })();
+
+function CustomersController() {
+
+}
 (function () {
 	angular.module('pleasantPastureApp')
 		.service('firebaseArrayWatcher', ['firebase', '$firebaseArray', 'logProvider', function (firebase, $firebaseArray, logProvider) {
@@ -280,6 +304,30 @@
 			};
 		}]);
 })();
+(function () {
+	angular.module('pleasantPastureApp')
+		.component('orders', {
+			templateUrl: 'app/components/orders/orders.html',
+			controller: OrdersController,
+			controllerAs: 'ordersController'
+		});
+})();
+
+function OrdersController() {
+
+}
+(function () {
+	angular.module('pleasantPastureApp')
+		.component('inventory', {
+			templateUrl: 'app/components/inventory/inventory.html',
+			controller: InventoryController,
+			controllerAs: 'inventoryController'
+		});
+})();
+
+function InventoryController() {
+
+}
 (function(){
     angular.module('pleasantPastureApp')
         .service('peopleProvider', ['$q', 'firebase', 'firebaseArrayWatcher', 'logProvider', '$rootScope', function($q, firebase, firebaseArrayWatcher, logProvider, $rootScope){
