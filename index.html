@@ -23,17 +23,7 @@
             </header>
             <div style="background: white;">
                 <div style="background: url('/img/background.jpg') repeat-x; border-bottom: #682e04">
-                    <nav></nav>
-                    <div class="content">
-                        <div id="article" class="content left" style="width: 700px;">
-                            <section id="main" ui-view></section>
-                        </div>
-                        <div class="content right" id="sideBar" style="width: 285px; border-left: solid 1px #ccc;">
-							<testimonials></testimonials>
-                            <contact-form></contact-form>
-                            <map></map>
-                        </div>
-                    </div>
+                    <ui-view></ui-view>
                 </div>
             </div>
             <footer>
