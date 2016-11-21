@@ -5,8 +5,8 @@
 			controller: InventoryController,
 			controllerAs: 'inventoryController'
 		});
+
+	function InventoryController() {
+
+	}
 })();
-
-function InventoryController() {
-
-}

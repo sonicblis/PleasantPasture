@@ -1,13 +1,14 @@
 <div>
 	<div style="margin: auto; width: 778px;">
-		<div class="product clickable" ui-sref="public.soap">
-			<img src="/img/soap.png" />
-			<div class="productcontent">
+		<div class="product clickable">
+			<img ui-sref="public.soap" src="/img/soap.png" />
+			<div ui-sref="public.soap" class="productcontent">
 				We use hand milked goat milk to produce some of the most delightful goat milk soap we've ever
 				used.  Try a bar and be blown away by the amazing experience.
 			</div>
 			<div class="productmore">
-				Read More <span class="arrows">>></span>
+				<div ui-sref="public.store" class="secondary-product-action"><i class="fa fa-shopping-cart"></i> Shop Now</div>
+				<span ui-sref="public.soap">Read More <span class="arrows">>></span></span>
 			</div>
 		</div>
 		<div class="product clickable" ui-sref="public.eggs">

@@ -27,12 +27,17 @@
 					url: "chicken",
 					templateUrl: "app/chicken/chicken.html"
 				})
-				.state('public.ap', {
+				.state('public.map', {
 					url: "map",
 					templateUrl: "app/map/map.html"
 				})
+				.state('public.store', {
+					url: "store",
+					template: '<store></store>'
+				})
 				.state('app', {
 					url: '/app',
+					redirectTo: 'app.orders',
 					template: '<console></console>'
 				})
 				.state('app.orders', {

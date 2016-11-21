@@ -6,30 +6,38 @@ console{
   .tabs{
     padding-top: 5px;
     position: absolute;
-  }
 
-  a{
-    border: 1px solid transparent;
-    border-top-width: 6px;
-    border-bottom-color: #518ccc;
-    text-decoration: none;
-    padding: 0 15px 8px 15px;
-    margin-top: 6px;
-    display: inline-block;
-    background: #c5c5c5;
-
-    &:active{
-      color: black;
-    }
-
-    &.active{
-      border-radius: 4px 4px 0 0;
-      margin-top: 0;
-      border: 1px solid #518ccc;
+    a{
+      border: 1px solid transparent;
       border-top-width: 6px;
-      border-bottom-color: white;
-      padding: 6px 15px 8px 15px;
-      background: white;
+      border-bottom-color: #518ccc;
+      text-decoration: none;
+      padding: 0 15px 8px 15px;
+      margin-top: 6px;
+      display: inline-block;
+      background: #c5c5c5;
+
+      &:first-child{
+        border-radius: 4px 0 0 0;
+      }
+
+      &:last-child{
+        border-radius: 0 4px 0 0;
+      }
+
+      &:active{
+        color: black;
+      }
+
+      &.active{
+        border-radius: 4px 4px 0 0;
+        margin-top: 0;
+        border: 1px solid #518ccc;
+        border-top-width: 6px;
+        border-bottom-color: white;
+        padding: 6px 15px 8px 15px;
+        background: white;
+      }
     }
   }
 

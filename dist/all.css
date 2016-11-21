@@ -76,10 +76,15 @@ textarea {
   padding-top: 0;
 }
 .productmore {
+  position: relative;
   background: #ddd;
   text-align: right;
   font-weight: bold;
   padding: 5px;
+}
+.productmore .secondary-product-action {
+  position: absolute;
+  left: 5px;
 }
 .arrows {
   font-weight: normal;
@@ -179,7 +184,7 @@ console .tabs {
   padding-top: 5px;
   position: absolute;
 }
-console a {
+console .tabs a {
   border: 1px solid transparent;
   border-top-width: 6px;
   border-bottom-color: #518ccc;
@@ -189,10 +194,16 @@ console a {
   display: inline-block;
   background: #c5c5c5;
 }
-console a:active {
+console .tabs a:first-child {
+  border-radius: 4px 0 0 0;
+}
+console .tabs a:last-child {
+  border-radius: 0 4px 0 0;
+}
+console .tabs a:active {
   color: black;
 }
-console a.active {
+console .tabs a.active {
   border-radius: 4px 4px 0 0;
   margin-top: 0;
   border: 1px solid #518ccc;
@@ -208,3 +219,4 @@ console ui-view {
   display: block;
   padding: 15px;
 }
+
