@@ -202,41 +202,6 @@ function CustomersController() {
 
 (function () {
 	angular.module('pleasantPastureApp')
-		.component('store', {
-			templateUrl: 'app/components/store/store.html',
-			controller: ["stripeService", StoreController],
-			controllerAs: 'storeController'
-		});
-
-	function StoreController(stripeService) {
-		var self = this;
-
-		function addItem(item){}
-		function removeItem(item){}
-		function incrementQuantity(cartItem){}
-		function decrementQuantity(cartItem){}
-		function setInventoryToSelf(inventory){
-			return $q(function (resolve, reject) {
-				self.inventory = inventory;
-				resolve(inventory);
-			});
-		}
-
-		self.inventory = [];
-		self.cart = {
-			total: 0,
-			items: []
-		};
-
-		//init
-		stripeService.getInventory()
-			.then(self.setInventoryToSelf)
-			.catch(console.error);
-	}
-})();
-
-(function () {
-	angular.module('pleasantPastureApp')
 		.component('orders', {
 			templateUrl: 'app/components/orders/orders.html',
 			controller: OrdersController,
@@ -247,6 +212,246 @@ function CustomersController() {
 function OrdersController() {
 
 }
+(function () {
+	angular.module('pleasantPastureApp')
+		.component('store', {
+			templateUrl: 'app/components/store/store.html',
+			controller: ['stripeService', '$q', StoreController],
+			controllerAs: 'storeController'
+		});
+
+	function StoreController(stripeService, $q) {
+		var self = this,
+			handler = null;
+
+		function addItemToCart(item){
+			var sku = item.skus.data[0],
+				existingItem = self.cart.items.find(function(existingItem){ return sku.id === existingItem.id; });
+			item.id = sku.id;
+			item.price = sku.price;
+
+			if (existingItem){
+				incrementQuantity(existingItem);
+			}
+			else{
+				item.quantity = 1;
+				self.cart.items.push(item);
+				calculateCartTotal();
+			}
+		}
+		function removeItemFromCart(item){
+			self.cart.items.splice(self.cart.items.indexOf(item), 1);
+			calculateCartTotal();
+		}
+		function incrementQuantity(cartItem){
+			cartItem.quantity++;
+			calculateCartTotal();
+		}
+		function decrementQuantity(cartItem){
+			if (cartItem.quantity === 1){
+				removeItemFromCart(cartItem);
+			}
+			else {
+				cartItem.quantity--;
+				calculateCartTotal();
+			}
+		}
+		function calculateCartTotal(){
+			var total = self.cart.items.reduce(function(total, cartItem){
+				return total + ((cartItem.price / 100) * cartItem.quantity);
+			}, 0);
+			var cartItemCount = self.cart.items.reduce(function(total, cartItem){
+				console.log(total, cartItem);
+				return total + (cartItem.static ? 0 : cartItem.quantity);
+			}, 0);
+			self.cart.total = total;
+			self.cart.itemCount = cartItemCount;
+		}
+		function setInventoryToSelf(inventory){
+			console.debug('got inventory', inventory);
+			return $q(function (resolve, reject) {
+				self.inventory = inventory;
+				resolve(inventory);
+			});
+		}
+		function payForOrder(){
+			blockShippingSelection()
+				.then(blockPayment)
+				.then(getToken)
+				.then(function(token){
+					return stripeService.chargeCard(token, self.order);
+				})
+				.then(notifyOfSuccess)
+				.catch(console.error)
+
+		}
+		function getToken(){
+			return $q(function (resolve, reject) {
+				stripeService.createToken(self.cardInfo, resolve);
+			});
+		}
+		function notifyOfSuccess(){
+			return $q(function (resolve) {
+				self.selectedShippingOption = false;
+				self.paying = false;
+				self.selectedShippingOption = null;
+				self.shippingOptions = [];
+				self.checkingOut = false;
+				self.checkoutSuccessful = true;
+				resolve();
+			});
+		}
+		function getShippingOptions(){
+			addCartItemsToOrder()
+				.then(stripeService.creatOrder)
+				.then(setOrderToSelf)
+				.then(setShippingOptionsToSelf);
+		}
+		function addCartItemsToOrder(){
+			return $q(function (resolve, reject) {
+				self.cart.items.forEach(function(cartItem){
+					self.order.items.push({
+						type: 'sku',
+						quantity: cartItem.quantity,
+						parent: cartItem.id
+					})
+				});
+				resolve(self.order);
+			});
+		}
+		function setShippingOptionsToSelf(orderInfo){
+			return $q(function (resolve, reject) {
+				self.shippingOptions = orderInfo.shipping_methods;
+				resolve(self.shippingOptions);
+			});
+		}
+		function setOrderToSelf(order){
+			return $q(function (resolve, reject) {
+				self.order = order;
+				resolve(order);
+			});
+		}
+		function addShippingToCart(shippingOption){
+			return $q(function (resolve, reject) {
+				var previouslySelectedShipping = self.cart.items.find(function(item){
+					return item.shippingItem == true;
+				});
+				if (previouslySelectedShipping){
+					self.cart.items.splice(self.cart.items.indexOf(previouslySelectedShipping), 1);
+				}
+				self.cart.items.push({
+					name: shippingOption.description,
+					price: shippingOption.amount,
+					quantity: 1,
+					static: true, //prevents the plus/minus buttons
+					shippingItem: true
+				});
+				calculateCartTotal();
+				resolve(shippingOption);
+			});
+		}
+		function setSelectedShippingMethodToScope(shippingOption){
+			return $q(function (resolve, reject) {
+				self.selectedShippingOption = shippingOption;
+				resolve(shippingOption);
+			});
+		}
+		function updateOrderWithSelectedShipping(shippingOption){
+			return $q(function (resolve, reject) {
+				self.order.selected_shipping_method = shippingOption.id;
+				resolve(self.order);
+			});
+		}
+		function blockShippingSelection(option){
+			return $q(function (resolve, reject) {
+				self.updatingShipping = true;
+				resolve(option);
+			});
+		}
+		function blockPayment(){
+			return $q(function (resolve) {
+				self.paying = true;
+				resolve();
+			});
+		}
+		function unblockShippingSelection(){
+			return $q(function (resolve, reject) {
+				self.updatingShipping = false;
+				resolve();
+			});
+		}
+		function selectShipping(option){
+			blockShippingSelection(option)
+				.then(addShippingToCart)
+				.then(setSelectedShippingMethodToScope)
+				.then(updateOrderWithSelectedShipping)
+				.then(stripeService.updateOrder)
+				.then(setOrderToSelf)
+				.then(unblockShippingSelection)
+				.catch(console.error);
+		}
+
+		self.inventory = [];
+		self.cart = {
+			total: 0,
+			itemCount: 0,
+			items: []
+		};
+		self.checkingOut = false;
+		self.updatingShipping = false;
+		self.paying = false;
+		self.selectedShippingOption = null;
+		self.order = {
+			currency: 'usd',
+			items: [],
+			shipping: {
+				address:
+				{
+					country: 'US'
+				}
+			}
+		};
+		self.shippingOptions = [{description: 'Priority Plus Mail and Stuff', amount: 546, delivery_estimate: {type: 'exact', date: new Date()}}, {description: 'Priority Plus Mail and Stuff', amount: 546, delivery_estimate: {type: 'exact', date: new Date()}}];
+		self.yearOptions = [];
+		self.addItem = addItemToCart;
+		self.increment = incrementQuantity;
+		self.decrement = decrementQuantity;
+		self.payForOrder = payForOrder;
+		self.getShippingOptions = getShippingOptions;
+		self.selectShipping = selectShipping;
+
+		//init
+		stripeService.getInventory()
+			.then(setInventoryToSelf)
+			.catch(console.error);
+
+		var thisYear = new Date().getFullYear(),
+			year = thisYear;
+		for (var i = 0; i < 8; i++){
+			self.yearOptions.push(year++);
+		}
+	}
+})();
+
+(function () {
+	angular.module('pleasantPastureApp')
+		.directive("contactForm", [function () {
+			return {
+				restrict: 'E',
+				templateUrl: 'app/forms/contact/contactForm.html',
+				controller: ['$scope', 'firebase', function ($scope, firebase) {
+					$scope.saved = false;
+					$scope.contact = {};
+					$scope.saveContact = function () {
+						firebase.contacts.push($scope.contact, function () {
+							$scope.saved = true;
+							$scope.$digest();
+						});
+					};
+				}]
+			}
+		}]);
+})();
 (function () {
 	angular.module('pleasantPastureApp')
 		.directive('focusWhen', function ($timeout, $parse) {
@@ -350,32 +555,69 @@ function OrdersController() {
 			};
 		}]);
 })();
-(function(angular){
+(function(angular, stripe){
 	angular.module('pleasantPastureApp')
-		.service('stripeService', function(){
-			function getInventory(){
+		.run(function(){
+			stripe.setPublishableKey('pk_test_NbvQO6DSbEouUSzP16cCvpTx');
+			function cardInfo(number, cvc, monthExpires, yearExpires){
+				this.number = number;
+				this.cvc = cvc;
+				this.exp_month = monthExpires;
+				this.exp_year = yearExpires;
+			}
+		})
+		.service('stripeService', ['$q', '$http', function($q, $http){
+			function getInventory() {
 				return $q(function (resolve, reject) {
-					resolve([
-						{
-							name: "Perfect Man",
-							price: 5.99,
-							img: '',
-							quantity: 22
-						},
-						{
-							name: "Mulled Cider",
-							price: 5.99,
-							img: '',
-							quantity: 12
-						}
-					]);
+					$http.get('http://localhost:8088/api/products').then(function(result){
+						console.log('stripe provided', result);
+						resolve(result.data.data);
+					});
+				});
+			}
+			function chargeCard(token, order){
+				return $q(function (resolve, reject) {
+					$http.post('http://localhost:8088/api/charge', {
+						token: token,
+						orderId: order.id
+					}).then(
+						function(result){ resolve(result.data); },
+						function(result){ reject(result); }
+					);
+				});
+			}
+			function createOrder(order){
+				return $q(function (resolve, reject) {
+					$http.post('http://localhost:8088/api/order', order)
+						.then(
+							function(result){ resolve(result.data); },
+							function(result){ reject(result); }
+						);
+				});
+			}
+			function updateOrder(order){
+				return $q(function (resolve, reject) {
+					$http.put('http://localhost:8088/api/order', order)
+						.then(
+							function(result){ resolve(result.data); },
+							function(result){ reject(result); }
+						);
+				});
+			}
+			function createToken(cardInfo){
+				return $q(function (resolve, reject) {
+					stripe.card.createToken(cardInfo, resolve);
 				});
 			}
 
 			this.getInventory = getInventory;
-		}
+			this.chargeCard = chargeCard;
+			this.creatOrder = createOrder;
+			this.updateOrder = updateOrder;
+			this.createToken = createToken;
+		}]
 	)
-})(angular);
+})(angular, Stripe);
 (function(){
     angular.module('pleasantPastureApp')
         .service('peopleProvider', ['$q', 'firebase', 'firebaseArrayWatcher', 'logProvider', '$rootScope', function($q, firebase, firebaseArrayWatcher, logProvider, $rootScope){
@@ -408,25 +650,6 @@ function OrdersController() {
                 });
             }
         }]);
-})();
-(function () {
-	angular.module('pleasantPastureApp')
-		.directive("contactForm", [function () {
-			return {
-				restrict: 'E',
-				templateUrl: 'app/forms/contact/contactForm.html',
-				controller: ['$scope', 'firebase', function ($scope, firebase) {
-					$scope.saved = false;
-					$scope.contact = {};
-					$scope.saveContact = function () {
-						firebase.contacts.push($scope.contact, function () {
-							$scope.saved = true;
-							$scope.$digest();
-						});
-					};
-				}]
-			}
-		}]);
 })();
 (function () {
 	angular.module('pleasantPastureApp')

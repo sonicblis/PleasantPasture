@@ -1,5 +1,130 @@
 <div>
-    <cart>
-        {{storeController.cart.items.length}} <i class="fa-shopping-cart"></i> : {{storeController.cart.total | currency}}
-    </cart>
+    <store-info>
+        <products ng-hide="storeController.checkingOut">
+            <store-product ng-repeat="item in storeController.inventory">
+                <div class="heading">
+                    <b>{{item.caption}}</b>
+                    <div class="pull-right">{{item.skus.data[0].inventory.quantity}} in stock</div>
+                </div>
+                <product-details>
+                    <img ng-src="{{item.skus.data[0].image}}" align="top">
+                    <description>
+                        {{item.description}}
+                    </description>
+                    <actions>
+                        <button ng-click="storeController.addItem(item)">Add</button>
+                    </actions>
+
+                </product-details>
+            </store-product>
+        </products>
+        <confirmation ng-show="storeController.checkoutSuccessful">
+            <h2>Thank You!!</h2>
+            Your order has been received.  You'll receive an e-mail with your receipt.<br><br>Thank you for supporting the local farming community with your purchase.  We truly appreciate your
+            business and look forward to providing your amazing soap.
+        </confirmation>
+        <shipping ng-show="storeController.checkingOut">
+            <form ng-submit="storeController.getShippingOptions()" ng-hide="storeController.shippingOptions.length > 0 && false">
+                <form-fields>
+                    <form-field class="half">
+                        <label>Name</label>
+                        <input type="text" required ng-model="storeController.order.shipping.name">
+                    </form-field>
+                    <form-field class="half">
+                        <label>E-mail</label>
+                        <input type="text" required ng-model="storeController.order.email">
+                    </form-field>
+                    <form-field>
+                        <label>Address</label>
+                        <input type="text" required ng-model="storeController.order.shipping.address.line1">
+                    </form-field>
+                    <form-field class="half">
+                        <label>Suite</label>
+                        <input type="text" ng-model="storeController.order.shipping.address.line2">
+                    </form-field>
+                    <form-field class="half">
+                        <label>Zip</label>
+                        <input type="number" required ng-model="storeController.order.shipping.address.postal_code" maxlength="5">
+                    </form-field>
+                </form-fields>
+                <actions>
+                    <button type="submit">Get Shipping Options</button>
+                </actions>
+            </form>
+            <form ng-show="storeController.shippingOptions.length > 0">
+                <form-fields>
+                    <header>Select a shipping option</header>
+                    <shipping-option ng-repeat="option in storeController.shippingOptions" ng-class="{'selected': storeController.selectedShippingOption == option}" ng-click="storeController.selectedShippingOption = option">
+                        <selection>
+                            <i class="fa" ng-class="{'fa-check': storeController.selectedShippingOption == option}"></i>
+                        </selection>
+                        <option-details>
+                            <shipping-label>{{option.description}}</shipping-label>
+                            <date-estimate>
+                                Get it
+                                <span ng-show="option.delivery_estimate.type == 'exact'">
+                                    {{option.delivery_estimate.date | date:'M/d'}}
+                                </span>
+                                <span ng-show="option.delivery_estimate.type == 'range'">
+                                    {{option.delivery_estimate.earliest | date:'M/d'}} - {{option.delivery_estimate.latest | date:'M/d'}}
+                                </span>
+                            </date-estimate>
+                        </option-details>
+                        <price>{{(option.amount / 100) | currency}}</price>
+                    </shipping-option>
+                </form-fields>
+                <actions>
+                    <button ng-disabled="!storeController.selectedShippingOption">Update Cart</button>
+                </actions>
+            </form>
+        </shipping>
+        <card-info ng-show="storeController.canPay">
+            <form>
+                <form-fields>
+                    <form-field>
+                        <label>Card Number</label>
+                        <input type="text" ng-model="storeController.cardInfo.number">
+                    </form-field>
+                    <form-field class="half">
+                        <label>Expiration</label>
+                        <select style="width:60px;" ng-model="storeController.cardInfo.monthExpires">
+                            <option ng-repeat="month in ['01','02','03','04','05','06','07','08','09','10','11','12']" value="{{month}}">{{month}}</option>
+                        </select>/
+                        <select style="width:77px;" ng-model="storeController.cardInfo.yearExpires">
+                            <option ng-repeat="year in storeController.yearOptions" value="{{year}}">{{year}}</option>
+                        </select>
+                    </form-field>
+                    <form-field class="half">
+                        <label>CVC</label>
+                        <input type="text" maxlength="4" ng-model="storeController.cardInfo.cvc">
+                    </form-field>
+                </form-fields>
+                <actions>
+                    <button ng-click="storeController.cancelOrder()" class="warn left">Cancel</button>
+                    <button ng-disabled="storeController.processingPayment" ng-click="storeController.payForOrder()" class="primary">Place Order <i class="fa fa-usd"></i></button>
+                </actions>
+            </form>
+        </card-info>
+    </store-info>
+    <cart-items>
+        <cart>
+            <count>{{storeController.cart.itemCount}}</count>
+            <i class="fa fa-shopping-cart"></i>
+            <price>{{storeController.cart.total | currency}}</price>
+        </cart>
+        <cart-item ng-repeat="item in storeController.cart.items">
+            <quantity>
+                <buttons ng-hide="item.static">
+                    <i ng-click="storeController.addItem(item)" class="fa fa-plus-square"></i>
+                    <i ng-click="storeController.decrement(item)" class="fa fa-minus-square"></i>
+                </buttons>
+                <count ng-hide="item.static">
+                    {{item.quantity}}
+                </count>
+            </quantity>
+            <item-name>{{item.name || item.description}}</item-name>
+            <item-price>{{(item.amount / 100) || (item.quantity * ((item.price || 0) / 100)) | currency}}</item-price>
+        </cart-item>
+        <button class="btn right" style="margin-top: 5px;" ng-show="storeController.cart.total > 0" ng-click="storeController.checkingOut = true">Check Out <i class="fa fa-shopping-cart"></i></button>
+    </cart-items>
 </div>
