@@ -260,6 +260,7 @@ store store-info products store-product {
   border: solid 1px #ccc;
   background: white;
   border-radius: 4px;
+  margin-bottom: 10px;
 }
 store store-info products store-product > .heading > .pull-right {
   color: #aaa;
@@ -483,7 +484,7 @@ store cart-items cart-item item-name {
   display: inline-block;
   float: left;
   font-weight: bold;
-  margin: 3px 0 0 8px;
+  margin: 3px 0 5px 8px;
 }
 store cart-items cart-item item-price {
   display: inline-block;

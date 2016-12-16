@@ -13,13 +13,13 @@
 			function getInventory() {
 				return $q(function (resolve, reject) {
 					$http.get('http://localhost:8088/api/products').then(function(result){
-						console.log('stripe provided', result);
 						resolve(result.data.data);
 					});
 				});
 			}
 			function chargeCard(token, order){
 				return $q(function (resolve, reject) {
+					debugger;
 					$http.post('http://localhost:8088/api/charge', {
 						token: token,
 						orderId: order.id
@@ -49,7 +49,15 @@
 			}
 			function createToken(cardInfo){
 				return $q(function (resolve, reject) {
-					stripe.card.createToken(cardInfo, resolve);
+					stripe.card.createToken(cardInfo, function(status, response){
+						debugger;
+						if (response.error){
+							reject(response.error);
+						}
+						else{
+							resolve(response.id);
+						}
+					});
 				});
 			}
 

@@ -1,6 +1,6 @@
 <div>
     <store-info>
-        <products ng-hide="storeController.checkingOut">
+        <products ng-show="storeController.shopping">
             <store-product ng-repeat="item in storeController.inventory">
                 <div class="heading">
                     <b>{{item.caption}}</b>
@@ -23,7 +23,7 @@
             Your order has been received.  You'll receive an e-mail with your receipt.<br><br>Thank you for supporting the local farming community with your purchase.  We truly appreciate your
             business and look forward to providing your amazing soap.
         </confirmation>
-        <shipping ng-show="storeController.checkingOut">
+        <shipping ng-show="storeController.selectingShipping">
             <form ng-submit="storeController.getShippingOptions()" ng-hide="storeController.shippingOptions.length > 0 && false">
                 <form-fields>
                     <form-field class="half">
@@ -74,11 +74,11 @@
                     </shipping-option>
                 </form-fields>
                 <actions>
-                    <button ng-disabled="!storeController.selectedShippingOption">Update Cart</button>
+                    <button ng-disabled="!storeController.selectedShippingOption" ng-click="storeController.selectShipping(storeController.selectedShippingOption)">Update Cart</button>
                 </actions>
             </form>
         </shipping>
-        <card-info ng-show="storeController.canPay">
+        <card-info ng-show="storeController.paying">
             <form>
                 <form-fields>
                     <form-field>
@@ -87,10 +87,10 @@
                     </form-field>
                     <form-field class="half">
                         <label>Expiration</label>
-                        <select style="width:60px;" ng-model="storeController.cardInfo.monthExpires">
+                        <select style="width:60px;" ng-model="storeController.cardInfo.exp_month">
                             <option ng-repeat="month in ['01','02','03','04','05','06','07','08','09','10','11','12']" value="{{month}}">{{month}}</option>
                         </select>/
-                        <select style="width:77px;" ng-model="storeController.cardInfo.yearExpires">
+                        <select style="width:77px;" ng-model="storeController.cardInfo.exp_year">
                             <option ng-repeat="year in storeController.yearOptions" value="{{year}}">{{year}}</option>
                         </select>
                     </form-field>
@@ -113,18 +113,19 @@
             <price>{{storeController.cart.total | currency}}</price>
         </cart>
         <cart-item ng-repeat="item in storeController.cart.items">
-            <quantity>
-                <buttons ng-hide="item.static">
+            <quantity ng-hide="item.static">
+                <buttons>
                     <i ng-click="storeController.addItem(item)" class="fa fa-plus-square"></i>
                     <i ng-click="storeController.decrement(item)" class="fa fa-minus-square"></i>
                 </buttons>
-                <count ng-hide="item.static">
+                <count>
                     {{item.quantity}}
                 </count>
             </quantity>
             <item-name>{{item.name || item.description}}</item-name>
             <item-price>{{(item.amount / 100) || (item.quantity * ((item.price || 0) / 100)) | currency}}</item-price>
         </cart-item>
-        <button class="btn right" style="margin-top: 5px;" ng-show="storeController.cart.total > 0" ng-click="storeController.checkingOut = true">Check Out <i class="fa fa-shopping-cart"></i></button>
+        <button ng-disable="storeController.processingPayment" ng-show="storeController.canPay" class="primary right" style="margin-top: 5px;"  ng-click="storeController.paying = true; storeController.selectingShipping = false;">Pay <i class="fa fa-usd"></i></button>
+        <button class="btn right" style="margin-top: 5px;" ng-show="storeController.cart.total > 0 && !storeController.canPay" ng-click="storeController.selectingShipping = true; storeController.shopping = false">Check Out <i class="fa fa-shopping-cart"></i></button>
     </cart-items>
 </div>

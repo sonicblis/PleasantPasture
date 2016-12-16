@@ -47,33 +47,21 @@
 				return total + ((cartItem.price / 100) * cartItem.quantity);
 			}, 0);
 			var cartItemCount = self.cart.items.reduce(function(total, cartItem){
-				console.log(total, cartItem);
 				return total + (cartItem.static ? 0 : cartItem.quantity);
 			}, 0);
 			self.cart.total = total;
 			self.cart.itemCount = cartItemCount;
 		}
 		function setInventoryToSelf(inventory){
-			console.debug('got inventory', inventory);
 			return $q(function (resolve, reject) {
 				self.inventory = inventory;
 				resolve(inventory);
 			});
 		}
-		function payForOrder(){
-			blockShippingSelection()
-				.then(blockPayment)
-				.then(getToken)
-				.then(function(token){
-					return stripeService.chargeCard(token, self.order);
-				})
-				.then(notifyOfSuccess)
-				.catch(console.error)
-
-		}
 		function getToken(){
 			return $q(function (resolve, reject) {
-				stripeService.createToken(self.cardInfo, resolve);
+				stripeService.createToken(self.cardInfo)
+					.then(resolve);
 			});
 		}
 		function notifyOfSuccess(){
@@ -82,7 +70,7 @@
 				self.paying = false;
 				self.selectedShippingOption = null;
 				self.shippingOptions = [];
-				self.checkingOut = false;
+				self.selectingShipping = false;
 				self.checkoutSuccessful = true;
 				resolve();
 			});
@@ -91,6 +79,7 @@
 			addCartItemsToOrder()
 				.then(stripeService.creatOrder)
 				.then(setOrderToSelf)
+				.then(fixCrappyShippingOptions)
 				.then(setShippingOptionsToSelf);
 		}
 		function addCartItemsToOrder(){
@@ -105,9 +94,9 @@
 				resolve(self.order);
 			});
 		}
-		function setShippingOptionsToSelf(orderInfo){
+		function setShippingOptionsToSelf(shippingMethods){
 			return $q(function (resolve, reject) {
-				self.shippingOptions = orderInfo.shipping_methods;
+				self.shippingOptions = shippingMethods;
 				resolve(self.shippingOptions);
 			});
 		}
@@ -156,13 +145,20 @@
 		}
 		function blockPayment(){
 			return $q(function (resolve) {
-				self.paying = true;
+				self.canPay = false;
+				self.processingPayment = true;
 				resolve();
 			});
 		}
 		function unblockShippingSelection(){
 			return $q(function (resolve, reject) {
 				self.updatingShipping = false;
+				resolve();
+			});
+		}
+		function allowPayment(){
+			return $q(function (resolve, reject) {
+				self.canPay = true;
 				resolve();
 			});
 		}
@@ -174,7 +170,38 @@
 				.then(stripeService.updateOrder)
 				.then(setOrderToSelf)
 				.then(unblockShippingSelection)
+				.then(allowPayment)
 				.catch(console.error);
+		}
+		function fixCrappyShippingOptions(orderInfo){
+			//weirdly, shipping options come back with many weird suggestions
+			//like paying $20 for days later than the $5 option
+			var shippingOptions = orderInfo.shipping_methods;
+			return $q(function (resolve, reject) {
+				var sortedOptions = shippingOptions.sort(function(first, second){
+					var firstDate = new Date(first.delivery_estimate.date || first.delivery_estimate.earliest),
+						secondDate = new Date(second.delivery_estimate.date || second.delivery_estimate.earliest);
+					return secondDate - firstDate;
+				});
+				for (var i = 1; i < sortedOptions.length; i++){
+					for (var j = 0; i > j; j++) {
+						if (sortedOptions[i].amount < sortedOptions[j].amount) {
+							sortedOptions[j].ridiculous = true;
+						}
+					}
+				}
+				resolve(sortedOptions.filter(function(option){ return !option.ridiculous; }));
+			});
+		}
+		function payForOrder(){
+			blockPayment()
+				.then(getToken)
+				.then(function(token){
+					console.log(token);
+					return stripeService.chargeCard(token, self.order);
+				})
+				.then(notifyOfSuccess)
+				.catch(console.error)
 		}
 
 		self.inventory = [];
@@ -183,9 +210,12 @@
 			itemCount: 0,
 			items: []
 		};
-		self.checkingOut = false;
+		self.selectingShipping = false;
 		self.updatingShipping = false;
+		self.processingPayment = false;
 		self.paying = false;
+		self.shopping = true;
+		self.canPay = false;
 		self.selectedShippingOption = null;
 		self.order = {
 			currency: 'usd',
@@ -197,7 +227,7 @@
 				}
 			}
 		};
-		self.shippingOptions = [{description: 'Priority Plus Mail and Stuff', amount: 546, delivery_estimate: {type: 'exact', date: new Date()}}, {description: 'Priority Plus Mail and Stuff', amount: 546, delivery_estimate: {type: 'exact', date: new Date()}}];
+		self.shippingOptions = [];
 		self.yearOptions = [];
 		self.addItem = addItemToCart;
 		self.increment = incrementQuantity;
