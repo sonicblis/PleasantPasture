@@ -4,6 +4,28 @@ body
   background: #ccc;
   font-family: 'open sans';
   font-size: 10pt;
+
+  &.working{
+    cursor: progress !important;
+    button, input, select, textarea, label, .clickable, .fakelink{
+      cursor: progress !important;
+    }
+  }
+}
+
+.processing-indicator{
+  font-size: 2em;
+  display: inline-block;
+  position: fixed;
+  overflow: hidden;
+  border: solid 1px #aaa;
+  padding: 10px 15px;
+  background: #ddd;
+  color: dodgerblue;
+  border-radius: 10px;
+  opacity: .8;
+  top: 50%;
+  left: 50%;
 }
 
 h2

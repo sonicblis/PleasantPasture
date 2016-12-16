@@ -24,7 +24,7 @@
             business and look forward to providing your amazing soap.
         </confirmation>
         <shipping ng-show="storeController.selectingShipping">
-            <form ng-submit="storeController.getShippingOptions()" ng-hide="storeController.shippingOptions.length > 0 && false">
+            <form name="addressForm" ng-submit="storeController.getShippingOptions()" ng-hide="storeController.shippingOptions.length > 0 && false">
                 <form-fields>
                     <form-field class="half">
                         <label>Name</label>
@@ -32,7 +32,7 @@
                     </form-field>
                     <form-field class="half">
                         <label>E-mail</label>
-                        <input type="text" required ng-model="storeController.order.email">
+                        <input type="email" required ng-model="storeController.order.email">
                     </form-field>
                     <form-field>
                         <label>Address</label>
@@ -44,11 +44,12 @@
                     </form-field>
                     <form-field class="half">
                         <label>Zip</label>
-                        <input type="number" required ng-model="storeController.order.shipping.address.postal_code" maxlength="5">
+                        <input type="text" name="zip" pattern="\d{5}" required ng-model="storeController.order.shipping.address.postal_code" maxlength="5">
                     </form-field>
                 </form-fields>
                 <actions>
-                    <button type="submit">Get Shipping Options</button>
+                    <div class="left error" ng-show="storeController.addressError">We couldn't find your address</div>
+                    <button ng-disabled="addressForm.$invalid" type="submit">Get Shipping Options</button>
                 </actions>
             </form>
             <form ng-show="storeController.shippingOptions.length > 0">
@@ -63,15 +64,16 @@
                             <date-estimate>
                                 Get it
                                 <span ng-show="option.delivery_estimate.type == 'exact'">
-                                    {{option.delivery_estimate.date | date:'M/d'}}
+                                    {{option.delivery_estimate.date | date:'M/d'}}*
                                 </span>
                                 <span ng-show="option.delivery_estimate.type == 'range'">
-                                    {{option.delivery_estimate.earliest | date:'M/d'}} - {{option.delivery_estimate.latest | date:'M/d'}}
+                                    {{option.delivery_estimate.earliest | date:'M/d'}}* - {{option.delivery_estimate.latest | date:'M/d'}}*
                                 </span>
                             </date-estimate>
                         </option-details>
                         <price>{{(option.amount / 100) | currency}}</price>
                     </shipping-option>
+                    <small>*dates are estimates, but should be pretty accurate</small>
                 </form-fields>
                 <actions>
                     <button ng-disabled="!storeController.selectedShippingOption" ng-click="storeController.selectShipping(storeController.selectedShippingOption)">Update Cart</button>
@@ -79,31 +81,32 @@
             </form>
         </shipping>
         <card-info ng-show="storeController.paying">
-            <form>
+            <form name="paymentForm">
                 <form-fields>
                     <form-field>
                         <label>Card Number</label>
-                        <input type="text" ng-model="storeController.cardInfo.number">
+                        <input type="text" required ng-model="storeController.cardInfo.number">
                     </form-field>
                     <form-field class="half">
                         <label>Expiration</label>
-                        <select style="width:60px;" ng-model="storeController.cardInfo.exp_month">
+                        <select style="width:60px;" required ng-model="storeController.cardInfo.exp_month">
                             <option ng-repeat="month in ['01','02','03','04','05','06','07','08','09','10','11','12']" value="{{month}}">{{month}}</option>
                         </select>/
-                        <select style="width:77px;" ng-model="storeController.cardInfo.exp_year">
+                        <select style="width:77px;" required ng-model="storeController.cardInfo.exp_year">
                             <option ng-repeat="year in storeController.yearOptions" value="{{year}}">{{year}}</option>
                         </select>
                     </form-field>
                     <form-field class="half">
                         <label>CVC</label>
-                        <input type="text" maxlength="4" ng-model="storeController.cardInfo.cvc">
+                        <input type="text" required maxlength="4" ng-model="storeController.cardInfo.cvc">
                     </form-field>
                 </form-fields>
                 <actions>
-                    <button ng-click="storeController.cancelOrder()" class="warn left">Cancel</button>
-                    <button ng-disabled="storeController.processingPayment" ng-click="storeController.payForOrder()" class="primary">Place Order <i class="fa fa-usd"></i></button>
+                    <button type="button" ng-click="storeController.cancelOrder()" class="warn left">Cancel</button>
+                    <button ng-disabled="paymentForm.$invalid || storeController.processingPayment" ng-click="storeController.payForOrder()" class="primary">Place Order <i class="fa fa-usd"></i></button>
                 </actions>
             </form>
+            <payment-error ng-show="storeController.paymentErrorMessage"><i class="fa fa-exclamation-circle"></i> {{storeController.paymentErrorMessage}}</payment-error>
         </card-info>
     </store-info>
     <cart-items>
@@ -125,7 +128,7 @@
             <item-name>{{item.name || item.description}}</item-name>
             <item-price>{{(item.amount / 100) || (item.quantity * ((item.price || 0) / 100)) | currency}}</item-price>
         </cart-item>
-        <button ng-disable="storeController.processingPayment" ng-show="storeController.canPay" class="primary right" style="margin-top: 5px;"  ng-click="storeController.paying = true; storeController.selectingShipping = false;">Pay <i class="fa fa-usd"></i></button>
-        <button class="btn right" style="margin-top: 5px;" ng-show="storeController.cart.total > 0 && !storeController.canPay" ng-click="storeController.selectingShipping = true; storeController.shopping = false">Check Out <i class="fa fa-shopping-cart"></i></button>
+        <button ng-disable="storeController.processingPayment" ng-disabled="!storeController.canPay" class="primary right" style="margin-top: 5px;"  ng-click="storeController.paying = true; storeController.selectingShipping = false;">Pay <i class="fa fa-usd"></i></button>
+        <button class="btn left" style="margin-top: 5px;" ng-disabled="!storeController.canCheckOut" ng-click="storeController.selectingShipping = true; storeController.shopping = false">Check Out <i class="fa fa-shopping-cart"></i></button>
     </cart-items>
 </div>

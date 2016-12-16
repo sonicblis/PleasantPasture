@@ -2,14 +2,39 @@
 	angular.module('pleasantPastureApp')
 		.component('store', {
 			templateUrl: 'app/components/store/store.html',
-			controller: ['stripeService', '$q', StoreController],
+			controller: ['stripeService', '$q', '$rootScope', StoreController],
 			controllerAs: 'storeController'
 		});
 
-	function StoreController(stripeService, $q) {
+	function StoreController(stripeService, $q, root) {
 		var self = this,
 			handler = null;
 
+		function notifyOfSuccess(){
+			return $q(function (resolve) {
+				self.selectedShippingOption = false;
+				self.paying = false;
+				self.selectedShippingOption = null;
+				self.shippingOptions = [];
+				self.selectingShipping = false;
+				self.checkoutSuccessful = true;
+				resolve();
+			});
+		}
+		function startProcessing(){
+			return $q(function (resolve, reject) {
+				root.processing = true;
+				resolve();
+			});
+		}
+		function stopProcessing(){
+			return $q(function (resolve, reject) {
+				root.processing = false;
+				resolve();
+			});
+		}
+
+		//cart
 		function addItemToCart(item){
 			var sku = item.skus.data[0],
 				existingItem = self.cart.items.find(function(existingItem){ return sku.id === existingItem.id; });
@@ -24,10 +49,15 @@
 				self.cart.items.push(item);
 				calculateCartTotal();
 			}
+
+			enableCheckOut();
 		}
 		function removeItemFromCart(item){
 			self.cart.items.splice(self.cart.items.indexOf(item), 1);
 			calculateCartTotal();
+			if (self.cart.total == 0){
+				disableCheckOut();
+			}
 		}
 		function incrementQuantity(cartItem){
 			cartItem.quantity++;
@@ -52,35 +82,72 @@
 			self.cart.total = total;
 			self.cart.itemCount = cartItemCount;
 		}
+		function disableCheckOut(){
+			return $q(function (resolve, reject) {
+				self.canCheckOut = false;
+				resolve();
+			});
+		}
+		function enableCheckOut(){
+			return $q(function (resolve, reject) {
+				self.canCheckOut = true;
+				resolve();
+			});
+		}
+
+		//products
 		function setInventoryToSelf(inventory){
 			return $q(function (resolve, reject) {
 				self.inventory = inventory;
 				resolve(inventory);
 			});
 		}
-		function getToken(){
+
+		//order
+		function cancelAnyPreviousOrder(){
 			return $q(function (resolve, reject) {
-				stripeService.createToken(self.cardInfo)
-					.then(resolve);
+				self.order.items = [];
+				if (self.order.id) {
+					self.canPay = false;
+					stripeService.cancelOrder(self.order)
+						.then(resetOrder)
+						.then(resolve);
+				}
+				else{
+					resolve();
+				}
 			});
 		}
-		function notifyOfSuccess(){
-			return $q(function (resolve) {
-				self.selectedShippingOption = false;
-				self.paying = false;
-				self.selectedShippingOption = null;
-				self.shippingOptions = [];
-				self.selectingShipping = false;
-				self.checkoutSuccessful = true;
+		function resetOrder(){
+			return $q(function (resolve, reject) {
+				var existingShippingInfo = self.order.shipping.address,
+					existingEmail = self.order.email,
+					existingName = self.order.shipping.name;
+
+				self.order = {currency: 'usd',
+					items: [],
+					shipping: {
+						address:
+						{
+							line1: existingShippingInfo.line1,
+							line2: existingShippingInfo.line2,
+							postal_code: existingShippingInfo.postal_code,
+							country: 'US'
+						},
+						name: existingName
+					}
+				};
+				self.order.email = existingEmail;
 				resolve();
 			});
 		}
-		function getShippingOptions(){
-			addCartItemsToOrder()
-				.then(stripeService.creatOrder)
-				.then(setOrderToSelf)
-				.then(fixCrappyShippingOptions)
-				.then(setShippingOptionsToSelf);
+		function handleOrderCreateError(response){
+			return $q(function (resolve, reject) {
+				stopProcessing()
+					.then(addressInvalid)
+					.catch(console.error);
+				reject('bad address');
+			});
 		}
 		function addCartItemsToOrder(){
 			return $q(function (resolve, reject) {
@@ -94,85 +161,14 @@
 				resolve(self.order);
 			});
 		}
-		function setShippingOptionsToSelf(shippingMethods){
-			return $q(function (resolve, reject) {
-				self.shippingOptions = shippingMethods;
-				resolve(self.shippingOptions);
-			});
-		}
 		function setOrderToSelf(order){
 			return $q(function (resolve, reject) {
 				self.order = order;
 				resolve(order);
 			});
 		}
-		function addShippingToCart(shippingOption){
-			return $q(function (resolve, reject) {
-				var previouslySelectedShipping = self.cart.items.find(function(item){
-					return item.shippingItem == true;
-				});
-				if (previouslySelectedShipping){
-					self.cart.items.splice(self.cart.items.indexOf(previouslySelectedShipping), 1);
-				}
-				self.cart.items.push({
-					name: shippingOption.description,
-					price: shippingOption.amount,
-					quantity: 1,
-					static: true, //prevents the plus/minus buttons
-					shippingItem: true
-				});
-				calculateCartTotal();
-				resolve(shippingOption);
-			});
-		}
-		function setSelectedShippingMethodToScope(shippingOption){
-			return $q(function (resolve, reject) {
-				self.selectedShippingOption = shippingOption;
-				resolve(shippingOption);
-			});
-		}
-		function updateOrderWithSelectedShipping(shippingOption){
-			return $q(function (resolve, reject) {
-				self.order.selected_shipping_method = shippingOption.id;
-				resolve(self.order);
-			});
-		}
-		function blockShippingSelection(option){
-			return $q(function (resolve, reject) {
-				self.updatingShipping = true;
-				resolve(option);
-			});
-		}
-		function blockPayment(){
-			return $q(function (resolve) {
-				self.canPay = false;
-				self.processingPayment = true;
-				resolve();
-			});
-		}
-		function unblockShippingSelection(){
-			return $q(function (resolve, reject) {
-				self.updatingShipping = false;
-				resolve();
-			});
-		}
-		function allowPayment(){
-			return $q(function (resolve, reject) {
-				self.canPay = true;
-				resolve();
-			});
-		}
-		function selectShipping(option){
-			blockShippingSelection(option)
-				.then(addShippingToCart)
-				.then(setSelectedShippingMethodToScope)
-				.then(updateOrderWithSelectedShipping)
-				.then(stripeService.updateOrder)
-				.then(setOrderToSelf)
-				.then(unblockShippingSelection)
-				.then(allowPayment)
-				.catch(console.error);
-		}
+
+		//shipping
 		function fixCrappyShippingOptions(orderInfo){
 			//weirdly, shipping options come back with many weird suggestions
 			//like paying $20 for days later than the $5 option
@@ -193,15 +189,198 @@
 				resolve(sortedOptions.filter(function(option){ return !option.ridiculous; }));
 			});
 		}
-		function payForOrder(){
+		function addTwoDaysToShippingDates(shippingOptions){
+			return $q(function (resolve, reject) {
+				shippingOptions.forEach(function(option){
+					var expectedDate = new Date(option.delivery_estimate.date || option.delivery_estimate.earliest);
+					expectedDate.setDate(expectedDate.getDate() + 3);
+
+					option.delivery_estimate.date = expectedDate;
+					option.delivery_estimate.earliest = expectedDate;
+
+					if (option.delivery_estimate.latest){
+						var latest = new Date(option.delivery_estimate.latest);
+						option.delivery_estimate.latest = latest.setDate(latest.getDate() + 3);
+					}
+				});
+				resolve(shippingOptions);
+			});
+		}
+		function unblockShippingSelection(){
+			return $q(function (resolve, reject) {
+				self.updatingShipping = false;
+				resolve();
+			});
+		}
+		function blockShippingSelection(option){
+			return $q(function (resolve, reject) {
+				self.updatingShipping = true;
+				resolve(option);
+			});
+		}
+		function updateOrderWithSelectedShipping(shippingOption){
+			return $q(function (resolve, reject) {
+				self.order.selected_shipping_method = shippingOption.id;
+				resolve(self.order);
+			});
+		}
+		function setSelectedShippingMethodToScope(shippingOption){
+			return $q(function (resolve, reject) {
+				self.selectedShippingOption = shippingOption;
+				resolve(shippingOption);
+			});
+		}
+		function setShippingOptionsToSelf(shippingMethods){
+			return $q(function (resolve, reject) {
+				self.shippingOptions = shippingMethods;
+				resolve(self.shippingOptions);
+			});
+		}
+		function addressInvalid(){
+			return $q(function (resolve, reject) {
+				self.addressError = true;
+				resolve();
+			});
+		}
+		function setAddressValid(){
+			return $q(function (resolve, reject) {
+				self.addressError = false;
+				resolve();
+			});
+		}
+		function getShippingOptions(){
+			startProcessing()
+				.then(cancelAnyPreviousOrder)
+				.then(removePreviousShippingOptions)
+				.then(addCartItemsToOrder)
+				.then(stripeService.creatOrder)
+				.then(setOrderToSelf, handleOrderCreateError)
+				.then(fixCrappyShippingOptions)
+				.then(addTwoDaysToShippingDates)
+				.then(setShippingOptionsToSelf)
+				.then(setAddressValid)
+				.then(stopProcessing)
+				.catch(console.error);
+		}
+		function removePreviousShippingOptions(){
+			return $q(function (resolve, reject) {
+				self.shippingOptions = [];
+				self.selectedShippingOption = null;
+				removeShippingFromCart()
+					.then(resolve)
+					.catch(console.error);
+			});
+		}
+		function removeShippingFromCart(){
+			return $q(function (resolve, reject) {
+				var previouslySelectedShipping = self.cart.items.find(function(item){
+					return item.shippingItem == true;
+				});
+				if (previouslySelectedShipping){
+					self.cart.items.splice(self.cart.items.indexOf(previouslySelectedShipping), 1);
+				}
+				resolve();
+			});
+		}
+		function addShippingToCart(shippingOption){
+			return $q(function (resolve, reject) {
+				self.cart.items.push({
+					name: shippingOption.description,
+					price: shippingOption.amount,
+					quantity: 1,
+					static: true, //prevents the plus/minus buttons
+					shippingItem: true
+				});
+				calculateCartTotal();
+				resolve(shippingOption);
+			});
+		}
+		function selectShipping(option){
 			blockPayment()
+				.then(blockShippingSelection)
+				.then(removeShippingFromCart)
+				.then(function() { return addShippingToCart(option); })
+				.then(setSelectedShippingMethodToScope)
+				.then(updateOrderWithSelectedShipping)
+				.then(stripeService.updateOrder)
+				.then(setOrderToSelf)
+				.then(unblockShippingSelection)
+				.then(allowPayment)
+				.then(disableCheckOut)
+				.catch(console.error);
+		}
+
+		//payment
+		function getToken(){
+			return $q(function (resolve, reject) {
+				stripeService.createToken(self.cardInfo)
+					.then(resolve)
+					.catch(reject);
+			});
+		}
+		function handleTokenFailure(error){
+			return $q(function (resolve, reject) {
+				self.paymentErrorMessage = error.message || error;
+				stopProcessing()
+					.then(allowPayment)
+					.then(function(error){ reject(error); });
+			});
+		}
+		function handleChargeFailure(result){
+			return $q(function (resolve, reject) {
+				self.paymentErrorMessage = result.error.message;
+				stopProcessing()
+					.then(allowPayment)
+					.then(reject);
+			});
+		}
+		function clearPreviousPaymentError(){
+			return $q(function (resolve, reject) {
+				self.paymentErrorMessage = null;
+				allowPayment()
+					.then(resolve);
+			});
+		}
+		function payForOrder(){
+			startProcessing()
+				.then(clearPreviousPaymentError)
+				.then(blockPayment)
 				.then(getToken)
 				.then(function(token){
-					console.log(token);
 					return stripeService.chargeCard(token, self.order);
-				})
-				.then(notifyOfSuccess)
+				}, handleTokenFailure)
+				.then(notifyOfSuccess, handleChargeFailure)
+				.then(stopProcessing)
 				.catch(console.error)
+		}
+		function blockPayment(){
+			return $q(function (resolve) {
+				self.canPay = false;
+				self.processingPayment = true;
+				resolve();
+			});
+		}
+		function allowPayment(){
+			return $q(function (resolve, reject) {
+				self.canPay = true;
+				self.processingPayment = false;
+				resolve();
+			});
+		}
+		function cancelPayment(){
+			cancelAnyPreviousOrder()
+				.then(removePreviousShippingOptions)
+				.then(blockPayment)
+				.then(enableCheckOut)
+				.then(blockShippingSelection)
+				.then(resetOrder)
+				.then(function(){
+					self.selectedShippingOption = false;
+					self.paying = false;
+					self.updatingShipping = false;
+					self.shopping = true;
+				})
+				.catch(console.error);
 		}
 
 		self.inventory = [];
@@ -217,6 +396,7 @@
 		self.shopping = true;
 		self.canPay = false;
 		self.selectedShippingOption = null;
+		self.canCheckOut = false;
 		self.order = {
 			currency: 'usd',
 			items: [],
@@ -229,12 +409,16 @@
 		};
 		self.shippingOptions = [];
 		self.yearOptions = [];
+		self.addressError = false;
+		self.paymentErrorMessage = null;
+
 		self.addItem = addItemToCart;
 		self.increment = incrementQuantity;
 		self.decrement = decrementQuantity;
 		self.payForOrder = payForOrder;
 		self.getShippingOptions = getShippingOptions;
 		self.selectShipping = selectShipping;
+		self.cancelOrder = cancelPayment;
 
 		//init
 		stripeService.getInventory()

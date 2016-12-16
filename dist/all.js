@@ -1,11 +1,27 @@
 (function(){
     angular.module('pleasantPastureApp', ['firebase', 'ui.router'])
-        .run(['logProvider', '$rootScope', '$state', function(logProvider, $rootScope, $state){
+        .run(['logProvider', '$rootScope', '$state', '$http', 'envService', function(logProvider, $rootScope, $state, $http, envService){
             logProvider.setLoggingLevels({
                 warn: true,
                 error: true,
                 debug: true,
                 info: true
+            });
+
+            $http.get('app/env.json')
+                .then(function(result){
+                if (result.data.STRIPE_PUBLIC_KEY) {
+                    envService.setStripePublicKey(result.data.STRIPE_PUBLIC_KEY);
+                }
+                else{
+                    throw new Error('The stripe public key could not be retrieved.  Make sure you have an env.json file configured.');
+                }
+                if (result.data.PLEASANTPASTURE_API_URL){
+                    envService.setPleasantPastureAPIUrl(result.data.PLEASANTPASTURE_API_URL);
+                }
+                else{
+                    throw new Error('The pleasant pasture url could not be retrieved.  Make sure you have an env.json file configured.');
+                }
             });
 
             $rootScope.$on('$stateChangeStart', function(e, toState, toParams, fromState, fromParams) {
@@ -160,6 +176,18 @@
 		}]);
 })();
 
+(function () {
+	angular.module('pleasantPastureApp')
+		.component('customers', {
+			templateUrl: 'app/components/customers/customers.html',
+			controller: CustomersController,
+			controllerAs: 'customersController'
+		});
+})();
+
+function CustomersController() {
+
+}
 (function(){
 	'use strict';
 
@@ -175,18 +203,6 @@
 			ctrl.title = 'Console';
 		});
 })();
-(function () {
-	angular.module('pleasantPastureApp')
-		.component('customers', {
-			templateUrl: 'app/components/customers/customers.html',
-			controller: CustomersController,
-			controllerAs: 'customersController'
-		});
-})();
-
-function CustomersController() {
-
-}
 (function () {
 	angular.module('pleasantPastureApp')
 		.component('inventory', {
@@ -216,14 +232,39 @@ function OrdersController() {
 	angular.module('pleasantPastureApp')
 		.component('store', {
 			templateUrl: 'app/components/store/store.html',
-			controller: ['stripeService', '$q', StoreController],
+			controller: ['stripeService', '$q', '$rootScope', StoreController],
 			controllerAs: 'storeController'
 		});
 
-	function StoreController(stripeService, $q) {
+	function StoreController(stripeService, $q, root) {
 		var self = this,
 			handler = null;
 
+		function notifyOfSuccess(){
+			return $q(function (resolve) {
+				self.selectedShippingOption = false;
+				self.paying = false;
+				self.selectedShippingOption = null;
+				self.shippingOptions = [];
+				self.selectingShipping = false;
+				self.checkoutSuccessful = true;
+				resolve();
+			});
+		}
+		function startProcessing(){
+			return $q(function (resolve, reject) {
+				root.processing = true;
+				resolve();
+			});
+		}
+		function stopProcessing(){
+			return $q(function (resolve, reject) {
+				root.processing = false;
+				resolve();
+			});
+		}
+
+		//cart
 		function addItemToCart(item){
 			var sku = item.skus.data[0],
 				existingItem = self.cart.items.find(function(existingItem){ return sku.id === existingItem.id; });
@@ -238,10 +279,15 @@ function OrdersController() {
 				self.cart.items.push(item);
 				calculateCartTotal();
 			}
+
+			enableCheckOut();
 		}
 		function removeItemFromCart(item){
 			self.cart.items.splice(self.cart.items.indexOf(item), 1);
 			calculateCartTotal();
+			if (self.cart.total == 0){
+				disableCheckOut();
+			}
 		}
 		function incrementQuantity(cartItem){
 			cartItem.quantity++;
@@ -266,35 +312,72 @@ function OrdersController() {
 			self.cart.total = total;
 			self.cart.itemCount = cartItemCount;
 		}
+		function disableCheckOut(){
+			return $q(function (resolve, reject) {
+				self.canCheckOut = false;
+				resolve();
+			});
+		}
+		function enableCheckOut(){
+			return $q(function (resolve, reject) {
+				self.canCheckOut = true;
+				resolve();
+			});
+		}
+
+		//products
 		function setInventoryToSelf(inventory){
 			return $q(function (resolve, reject) {
 				self.inventory = inventory;
 				resolve(inventory);
 			});
 		}
-		function getToken(){
+
+		//order
+		function cancelAnyPreviousOrder(){
 			return $q(function (resolve, reject) {
-				stripeService.createToken(self.cardInfo)
-					.then(resolve);
+				self.order.items = [];
+				if (self.order.id) {
+					self.canPay = false;
+					stripeService.cancelOrder(self.order)
+						.then(resetOrder)
+						.then(resolve);
+				}
+				else{
+					resolve();
+				}
 			});
 		}
-		function notifyOfSuccess(){
-			return $q(function (resolve) {
-				self.selectedShippingOption = false;
-				self.paying = false;
-				self.selectedShippingOption = null;
-				self.shippingOptions = [];
-				self.selectingShipping = false;
-				self.checkoutSuccessful = true;
+		function resetOrder(){
+			return $q(function (resolve, reject) {
+				var existingShippingInfo = self.order.shipping.address,
+					existingEmail = self.order.email,
+					existingName = self.order.shipping.name;
+
+				self.order = {currency: 'usd',
+					items: [],
+					shipping: {
+						address:
+						{
+							line1: existingShippingInfo.line1,
+							line2: existingShippingInfo.line2,
+							postal_code: existingShippingInfo.postal_code,
+							country: 'US'
+						},
+						name: existingName
+					}
+				};
+				self.order.email = existingEmail;
 				resolve();
 			});
 		}
-		function getShippingOptions(){
-			addCartItemsToOrder()
-				.then(stripeService.creatOrder)
-				.then(setOrderToSelf)
-				.then(fixCrappyShippingOptions)
-				.then(setShippingOptionsToSelf);
+		function handleOrderCreateError(response){
+			return $q(function (resolve, reject) {
+				stopProcessing()
+					.then(addressInvalid)
+					.catch(console.error);
+				reject('bad address');
+			});
 		}
 		function addCartItemsToOrder(){
 			return $q(function (resolve, reject) {
@@ -308,85 +391,14 @@ function OrdersController() {
 				resolve(self.order);
 			});
 		}
-		function setShippingOptionsToSelf(shippingMethods){
-			return $q(function (resolve, reject) {
-				self.shippingOptions = shippingMethods;
-				resolve(self.shippingOptions);
-			});
-		}
 		function setOrderToSelf(order){
 			return $q(function (resolve, reject) {
 				self.order = order;
 				resolve(order);
 			});
 		}
-		function addShippingToCart(shippingOption){
-			return $q(function (resolve, reject) {
-				var previouslySelectedShipping = self.cart.items.find(function(item){
-					return item.shippingItem == true;
-				});
-				if (previouslySelectedShipping){
-					self.cart.items.splice(self.cart.items.indexOf(previouslySelectedShipping), 1);
-				}
-				self.cart.items.push({
-					name: shippingOption.description,
-					price: shippingOption.amount,
-					quantity: 1,
-					static: true, //prevents the plus/minus buttons
-					shippingItem: true
-				});
-				calculateCartTotal();
-				resolve(shippingOption);
-			});
-		}
-		function setSelectedShippingMethodToScope(shippingOption){
-			return $q(function (resolve, reject) {
-				self.selectedShippingOption = shippingOption;
-				resolve(shippingOption);
-			});
-		}
-		function updateOrderWithSelectedShipping(shippingOption){
-			return $q(function (resolve, reject) {
-				self.order.selected_shipping_method = shippingOption.id;
-				resolve(self.order);
-			});
-		}
-		function blockShippingSelection(option){
-			return $q(function (resolve, reject) {
-				self.updatingShipping = true;
-				resolve(option);
-			});
-		}
-		function blockPayment(){
-			return $q(function (resolve) {
-				self.canPay = false;
-				self.processingPayment = true;
-				resolve();
-			});
-		}
-		function unblockShippingSelection(){
-			return $q(function (resolve, reject) {
-				self.updatingShipping = false;
-				resolve();
-			});
-		}
-		function allowPayment(){
-			return $q(function (resolve, reject) {
-				self.canPay = true;
-				resolve();
-			});
-		}
-		function selectShipping(option){
-			blockShippingSelection(option)
-				.then(addShippingToCart)
-				.then(setSelectedShippingMethodToScope)
-				.then(updateOrderWithSelectedShipping)
-				.then(stripeService.updateOrder)
-				.then(setOrderToSelf)
-				.then(unblockShippingSelection)
-				.then(allowPayment)
-				.catch(console.error);
-		}
+
+		//shipping
 		function fixCrappyShippingOptions(orderInfo){
 			//weirdly, shipping options come back with many weird suggestions
 			//like paying $20 for days later than the $5 option
@@ -407,15 +419,198 @@ function OrdersController() {
 				resolve(sortedOptions.filter(function(option){ return !option.ridiculous; }));
 			});
 		}
-		function payForOrder(){
+		function addTwoDaysToShippingDates(shippingOptions){
+			return $q(function (resolve, reject) {
+				shippingOptions.forEach(function(option){
+					var expectedDate = new Date(option.delivery_estimate.date || option.delivery_estimate.earliest);
+					expectedDate.setDate(expectedDate.getDate() + 3);
+
+					option.delivery_estimate.date = expectedDate;
+					option.delivery_estimate.earliest = expectedDate;
+
+					if (option.delivery_estimate.latest){
+						var latest = new Date(option.delivery_estimate.latest);
+						option.delivery_estimate.latest = latest.setDate(latest.getDate() + 3);
+					}
+				});
+				resolve(shippingOptions);
+			});
+		}
+		function unblockShippingSelection(){
+			return $q(function (resolve, reject) {
+				self.updatingShipping = false;
+				resolve();
+			});
+		}
+		function blockShippingSelection(option){
+			return $q(function (resolve, reject) {
+				self.updatingShipping = true;
+				resolve(option);
+			});
+		}
+		function updateOrderWithSelectedShipping(shippingOption){
+			return $q(function (resolve, reject) {
+				self.order.selected_shipping_method = shippingOption.id;
+				resolve(self.order);
+			});
+		}
+		function setSelectedShippingMethodToScope(shippingOption){
+			return $q(function (resolve, reject) {
+				self.selectedShippingOption = shippingOption;
+				resolve(shippingOption);
+			});
+		}
+		function setShippingOptionsToSelf(shippingMethods){
+			return $q(function (resolve, reject) {
+				self.shippingOptions = shippingMethods;
+				resolve(self.shippingOptions);
+			});
+		}
+		function addressInvalid(){
+			return $q(function (resolve, reject) {
+				self.addressError = true;
+				resolve();
+			});
+		}
+		function setAddressValid(){
+			return $q(function (resolve, reject) {
+				self.addressError = false;
+				resolve();
+			});
+		}
+		function getShippingOptions(){
+			startProcessing()
+				.then(cancelAnyPreviousOrder)
+				.then(removePreviousShippingOptions)
+				.then(addCartItemsToOrder)
+				.then(stripeService.creatOrder)
+				.then(setOrderToSelf, handleOrderCreateError)
+				.then(fixCrappyShippingOptions)
+				.then(addTwoDaysToShippingDates)
+				.then(setShippingOptionsToSelf)
+				.then(setAddressValid)
+				.then(stopProcessing)
+				.catch(console.error);
+		}
+		function removePreviousShippingOptions(){
+			return $q(function (resolve, reject) {
+				self.shippingOptions = [];
+				self.selectedShippingOption = null;
+				removeShippingFromCart()
+					.then(resolve)
+					.catch(console.error);
+			});
+		}
+		function removeShippingFromCart(){
+			return $q(function (resolve, reject) {
+				var previouslySelectedShipping = self.cart.items.find(function(item){
+					return item.shippingItem == true;
+				});
+				if (previouslySelectedShipping){
+					self.cart.items.splice(self.cart.items.indexOf(previouslySelectedShipping), 1);
+				}
+				resolve();
+			});
+		}
+		function addShippingToCart(shippingOption){
+			return $q(function (resolve, reject) {
+				self.cart.items.push({
+					name: shippingOption.description,
+					price: shippingOption.amount,
+					quantity: 1,
+					static: true, //prevents the plus/minus buttons
+					shippingItem: true
+				});
+				calculateCartTotal();
+				resolve(shippingOption);
+			});
+		}
+		function selectShipping(option){
 			blockPayment()
+				.then(blockShippingSelection)
+				.then(removeShippingFromCart)
+				.then(function() { return addShippingToCart(option); })
+				.then(setSelectedShippingMethodToScope)
+				.then(updateOrderWithSelectedShipping)
+				.then(stripeService.updateOrder)
+				.then(setOrderToSelf)
+				.then(unblockShippingSelection)
+				.then(allowPayment)
+				.then(disableCheckOut)
+				.catch(console.error);
+		}
+
+		//payment
+		function getToken(){
+			return $q(function (resolve, reject) {
+				stripeService.createToken(self.cardInfo)
+					.then(resolve)
+					.catch(reject);
+			});
+		}
+		function handleTokenFailure(error){
+			return $q(function (resolve, reject) {
+				self.paymentErrorMessage = error.message || error;
+				stopProcessing()
+					.then(allowPayment)
+					.then(function(error){ reject(error); });
+			});
+		}
+		function handleChargeFailure(result){
+			return $q(function (resolve, reject) {
+				self.paymentErrorMessage = result.error.message;
+				stopProcessing()
+					.then(allowPayment)
+					.then(reject);
+			});
+		}
+		function clearPreviousPaymentError(){
+			return $q(function (resolve, reject) {
+				self.paymentErrorMessage = null;
+				allowPayment()
+					.then(resolve);
+			});
+		}
+		function payForOrder(){
+			startProcessing()
+				.then(clearPreviousPaymentError)
+				.then(blockPayment)
 				.then(getToken)
 				.then(function(token){
-					console.log(token);
 					return stripeService.chargeCard(token, self.order);
-				})
-				.then(notifyOfSuccess)
+				}, handleTokenFailure)
+				.then(notifyOfSuccess, handleChargeFailure)
+				.then(stopProcessing)
 				.catch(console.error)
+		}
+		function blockPayment(){
+			return $q(function (resolve) {
+				self.canPay = false;
+				self.processingPayment = true;
+				resolve();
+			});
+		}
+		function allowPayment(){
+			return $q(function (resolve, reject) {
+				self.canPay = true;
+				self.processingPayment = false;
+				resolve();
+			});
+		}
+		function cancelPayment(){
+			cancelAnyPreviousOrder()
+				.then(removePreviousShippingOptions)
+				.then(blockPayment)
+				.then(enableCheckOut)
+				.then(blockShippingSelection)
+				.then(resetOrder)
+				.then(function(){
+					self.selectedShippingOption = false;
+					self.paying = false;
+					self.updatingShipping = false;
+					self.shopping = true;
+				})
+				.catch(console.error);
 		}
 
 		self.inventory = [];
@@ -431,6 +626,7 @@ function OrdersController() {
 		self.shopping = true;
 		self.canPay = false;
 		self.selectedShippingOption = null;
+		self.canCheckOut = false;
 		self.order = {
 			currency: 'usd',
 			items: [],
@@ -443,12 +639,16 @@ function OrdersController() {
 		};
 		self.shippingOptions = [];
 		self.yearOptions = [];
+		self.addressError = false;
+		self.paymentErrorMessage = null;
+
 		self.addItem = addItemToCart;
 		self.increment = incrementQuantity;
 		self.decrement = decrementQuantity;
 		self.payForOrder = payForOrder;
 		self.getShippingOptions = getShippingOptions;
 		self.selectShipping = selectShipping;
+		self.cancelOrder = cancelPayment;
 
 		//init
 		stripeService.getInventory()
@@ -514,6 +714,37 @@ function OrdersController() {
 			};
 		});
 })();
+(function () {
+	angular.module('pleasantPastureApp')
+		.service("envService", function () {
+			var stripePublicKey = '';
+			var pleasantPastureAPIUrl = '';
+
+			this.setStripePublicKey = function(key){
+				stripePublicKey = key;
+			};
+			this.setPleasantPastureAPIUrl = function(url){
+				pleasantPastureAPIUrl = url;
+			};
+			this.getStripePublicKey = function(){
+				if (stripePublicKey == '' || stripePublicKey == null || stripePublicKey == undefined){
+					throw new Error('The Stripe public key was not set.  Make sure you have an env.json file in your environment.');
+				}
+				else{
+					return stripePublicKey;
+				}
+			};
+			this.getPleasantPastureAPIUrl = function(){
+				if (pleasantPastureAPIUrl == '' || pleasantPastureAPIUrl == null || pleasantPastureAPIUrl == undefined){
+					throw new Error('The pleasant pasture api url was not set.  Make sure you have an env.json file in your environment.');
+				}
+				else{
+					return pleasantPastureAPIUrl;
+				}
+			};
+		});
+})();
+
 (function () {
 	angular.module('pleasantPastureApp')
 		.service('firebaseArrayWatcher', ['firebase', '$firebaseArray', 'logProvider', function (firebase, $firebaseArray, logProvider) {
@@ -587,27 +818,19 @@ function OrdersController() {
 })();
 (function(angular, stripe){
 	angular.module('pleasantPastureApp')
-		.run(function(){
-			stripe.setPublishableKey('pk_test_NbvQO6DSbEouUSzP16cCvpTx');
-			function cardInfo(number, cvc, monthExpires, yearExpires){
-				this.number = number;
-				this.cvc = cvc;
-				this.exp_month = monthExpires;
-				this.exp_year = yearExpires;
-			}
-		})
-		.service('stripeService', ['$q', '$http', function($q, $http){
+		.service('stripeService', ['$q', '$http', 'envService', function($q, $http, envService){
+			stripe.setPublishableKey(envService.getStripePublicKey());
+			var apiBaseUrl = envService.getPleasantPastureAPIUrl();
 			function getInventory() {
 				return $q(function (resolve, reject) {
-					$http.get('http://localhost:8088/api/products').then(function(result){
+					$http.get(apiBaseUrl + 'products').then(function(result){
 						resolve(result.data.data);
 					});
 				});
 			}
 			function chargeCard(token, order){
 				return $q(function (resolve, reject) {
-					debugger;
-					$http.post('http://localhost:8088/api/charge', {
+					$http.post(apiBaseUrl + 'charge', {
 						token: token,
 						orderId: order.id
 					}).then(
@@ -618,7 +841,7 @@ function OrdersController() {
 			}
 			function createOrder(order){
 				return $q(function (resolve, reject) {
-					$http.post('http://localhost:8088/api/order', order)
+					$http.post(apiBaseUrl + 'order', order)
 						.then(
 							function(result){ resolve(result.data); },
 							function(result){ reject(result); }
@@ -627,7 +850,16 @@ function OrdersController() {
 			}
 			function updateOrder(order){
 				return $q(function (resolve, reject) {
-					$http.put('http://localhost:8088/api/order', order)
+					$http.put(apiBaseUrl + 'order', order)
+						.then(
+							function(result){ resolve(result.data); },
+							function(result){ reject(result); }
+						);
+				});
+			}
+			function cancelOrder(order){
+				return $q(function (resolve, reject) {
+					$http.delete(apiBaseUrl + 'order/' + order.id)
 						.then(
 							function(result){ resolve(result.data); },
 							function(result){ reject(result); }
@@ -637,7 +869,6 @@ function OrdersController() {
 			function createToken(cardInfo){
 				return $q(function (resolve, reject) {
 					stripe.card.createToken(cardInfo, function(status, response){
-						debugger;
 						if (response.error){
 							reject(response.error);
 						}
@@ -653,6 +884,7 @@ function OrdersController() {
 			this.creatOrder = createOrder;
 			this.updateOrder = updateOrder;
 			this.createToken = createToken;
+			this.cancelOrder = cancelOrder;
 		}]
 	)
 })(angular, Stripe);

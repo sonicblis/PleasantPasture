@@ -4,6 +4,32 @@ body {
   font-family: 'open sans';
   font-size: 10pt;
 }
+body.working {
+  cursor: progress !important;
+}
+body.working button,
+body.working input,
+body.working select,
+body.working textarea,
+body.working label,
+body.working .clickable,
+body.working .fakelink {
+  cursor: progress !important;
+}
+.processing-indicator {
+  font-size: 2em;
+  display: inline-block;
+  position: fixed;
+  overflow: hidden;
+  border: solid 1px #aaa;
+  padding: 10px 15px;
+  background: #ddd;
+  color: dodgerblue;
+  border-radius: 10px;
+  opacity: .8;
+  top: 50%;
+  left: 50%;
+}
 h2 {
   color: #ed7908;
   margin-top: 0;
@@ -287,6 +313,21 @@ store store-info card-info {
   overflow: hidden;
   display: inline-block;
 }
+store store-info shipping .error,
+store store-info card-info .error,
+store store-info shipping payment-error,
+store store-info card-info payment-error {
+  color: maroon;
+  margin-top: 4px;
+}
+store store-info shipping payment-error,
+store store-info card-info payment-error {
+  padding: 8px 10px;
+  border: solid 1px #ccc;
+  background: #eee;
+  border-radius: 4px;
+  display: block;
+}
 store store-info shipping form,
 store store-info card-info form {
   border: solid 1px #ccc;
@@ -380,6 +421,18 @@ store store-info card-info form form-fields form-field select {
   font-family: arial;
   border-width: 0 0 1px 0;
   border-color: #888;
+}
+store store-info shipping form form-fields form-field input.ng-dirty.ng-invalid,
+store store-info card-info form form-fields form-field input.ng-dirty.ng-invalid,
+store store-info shipping form form-fields form-field select.ng-dirty.ng-invalid,
+store store-info card-info form form-fields form-field select.ng-dirty.ng-invalid {
+  border-color: red;
+}
+store store-info shipping form form-fields form-field input.ng-dirty.ng-valid,
+store store-info card-info form form-fields form-field input.ng-dirty.ng-valid,
+store store-info shipping form form-fields form-field select.ng-dirty.ng-valid,
+store store-info card-info form form-fields form-field select.ng-dirty.ng-valid {
+  border-color: forestgreen;
 }
 store store-info confirmation {
   display: inline-block;

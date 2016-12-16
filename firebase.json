@@ -1,12 +1,14 @@
 {
-  "firebase": "PleasantPasture",
-  "public": ".",
-  "ignore": [
-    "app/**/*.js",
-    "app/**/*.less",
-    "firebase.json",
-    "**/.*",
-    "**/node_modules/**",
-    "thirdParty/**"
-  ]
+  "hosting":{
+    "public": ".",
+    "ignore": [
+      "app/**/*.js",
+      "app/**/*.less",
+      "app/env.json",
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "thirdParty/**"
+    ]
+  }
 }

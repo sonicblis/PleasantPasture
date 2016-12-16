@@ -1,26 +1,18 @@
 (function(angular, stripe){
 	angular.module('pleasantPastureApp')
-		.run(function(){
-			stripe.setPublishableKey('pk_test_NbvQO6DSbEouUSzP16cCvpTx');
-			function cardInfo(number, cvc, monthExpires, yearExpires){
-				this.number = number;
-				this.cvc = cvc;
-				this.exp_month = monthExpires;
-				this.exp_year = yearExpires;
-			}
-		})
-		.service('stripeService', ['$q', '$http', function($q, $http){
+		.service('stripeService', ['$q', '$http', 'envService', function($q, $http, envService){
+			stripe.setPublishableKey(envService.getStripePublicKey());
+			var apiBaseUrl = envService.getPleasantPastureAPIUrl();
 			function getInventory() {
 				return $q(function (resolve, reject) {
-					$http.get('http://localhost:8088/api/products').then(function(result){
+					$http.get(apiBaseUrl + 'products').then(function(result){
 						resolve(result.data.data);
 					});
 				});
 			}
 			function chargeCard(token, order){
 				return $q(function (resolve, reject) {
-					debugger;
-					$http.post('http://localhost:8088/api/charge', {
+					$http.post(apiBaseUrl + 'charge', {
 						token: token,
 						orderId: order.id
 					}).then(
@@ -31,7 +23,7 @@
 			}
 			function createOrder(order){
 				return $q(function (resolve, reject) {
-					$http.post('http://localhost:8088/api/order', order)
+					$http.post(apiBaseUrl + 'order', order)
 						.then(
 							function(result){ resolve(result.data); },
 							function(result){ reject(result); }
@@ -40,7 +32,16 @@
 			}
 			function updateOrder(order){
 				return $q(function (resolve, reject) {
-					$http.put('http://localhost:8088/api/order', order)
+					$http.put(apiBaseUrl + 'order', order)
+						.then(
+							function(result){ resolve(result.data); },
+							function(result){ reject(result); }
+						);
+				});
+			}
+			function cancelOrder(order){
+				return $q(function (resolve, reject) {
+					$http.delete(apiBaseUrl + 'order/' + order.id)
 						.then(
 							function(result){ resolve(result.data); },
 							function(result){ reject(result); }
@@ -50,7 +51,6 @@
 			function createToken(cardInfo){
 				return $q(function (resolve, reject) {
 					stripe.card.createToken(cardInfo, function(status, response){
-						debugger;
 						if (response.error){
 							reject(response.error);
 						}
@@ -66,6 +66,7 @@
 			this.creatOrder = createOrder;
 			this.updateOrder = updateOrder;
 			this.createToken = createToken;
+			this.cancelOrder = cancelOrder;
 		}]
 	)
 })(angular, Stripe);

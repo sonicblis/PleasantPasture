@@ -53,6 +53,19 @@ store{
       overflow: hidden;
       display: inline-block;
 
+      .error, payment-error{
+        color: maroon;
+        margin-top: 4px;
+      }
+
+      payment-error{
+        padding: 8px 10px;
+        border: solid 1px #ccc;
+        background: #eee;
+        border-radius: 4px;
+        display:block;
+      }
+
       form {
         border: solid 1px #ccc;
         display: inline-block;
@@ -143,6 +156,14 @@ store{
               font-family: arial;
               border-width: 0 0 1px 0;
               border-color: #888;
+
+              &.ng-dirty.ng-invalid{
+                border-color: red;
+              }
+
+              &.ng-dirty.ng-valid{
+                border-color: forestgreen;
+              }
             }
           }
         }
