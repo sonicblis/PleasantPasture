@@ -14,10 +14,17 @@
 				return $q(function (resolve, reject) {
 					$http.post(apiBaseUrl + 'charge', {
 						token: token,
-						orderId: order.id
+						orderId: order.id,
+						email: order.email
 					}).then(
-						function(result){ resolve(result.data); },
-						function(result){ reject(result); }
+						function(result){
+							console.log('card charge success', result);
+							resolve(result.data);
+						},
+						function(result){
+							console.log('card charge error', result);
+							reject(result);
+						}
 					);
 				});
 			}

@@ -1,8 +1,23 @@
 @import '../../../styles/display';
 
+error{
+  color: maroon;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: solid 1px #ccc;
+  background: #eee;
+  border-radius: 4px;
+  display:block;
+
+  i{
+    margin-right: 3px;
+  }
+}
+
 store{
   overflow: auto;
   display: block;
+  position: relative;
 
   store-info{
     float: left;
@@ -52,19 +67,6 @@ store{
       float: left;
       overflow: hidden;
       display: inline-block;
-
-      .error, payment-error{
-        color: maroon;
-        margin-top: 4px;
-      }
-
-      payment-error{
-        padding: 8px 10px;
-        border: solid 1px #ccc;
-        background: #eee;
-        border-radius: 4px;
-        display:block;
-      }
 
       form {
         border: solid 1px #ccc;
@@ -173,10 +175,14 @@ store{
     display:inline-block;
     width: 450px;
 
-    h2{
+      button{
+        margin-top: 20px;
+      }
 
+      h2{
+
+      }
     }
-  }
   }
 
 
@@ -225,6 +231,11 @@ store{
     display: block;
     width: 227px;
     vertical-align: top;
+
+    &.fixed{
+      position: fixed;
+      top: 0;
+    }
 
     cart{
       .inline-block;

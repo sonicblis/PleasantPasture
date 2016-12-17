@@ -30,8 +30,26 @@
     <script type="text/javascript" src="https://js.stripe.com/v2/"></script>
     <script src="/dist/thirdparty.js"></script>
     <script src="/dist/all.js"></script>
+
+    <script>
+        function checkCartPosition(){
+            if (document.scrollingElement.scrollTop > 648){
+                document.querySelector('#cart').classList.add('fixed');
+                setCartLeft();
+            }
+            else{
+                document.querySelector('#cart').classList.remove('fixed');
+            }
+        }
+        function setCartLeft(){
+            var cart = document.querySelector('#cart.fixed');
+            if (cart && window.innerWidth > 1065){
+                cart.style.left = ((window.innerWidth / 2) - 40) + 'px';
+            }
+        }
+    </script>
 </head>
-<body ng-app="pleasantPastureApp" ng-class="{'working': $root.processing}">
+<body ng-app="pleasantPastureApp" ng-class="{'working': $root.processing}" onresize="setCartLeft()" onscroll="checkCartPosition()">
     <div>
         <div class="processing-indicator" ng-show="$root.processing">
             <i class="fa fa-circle-o-notch fa-spin"></i>

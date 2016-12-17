@@ -38,19 +38,23 @@
 		function addItemToCart(item){
 			var sku = item.skus.data[0],
 				existingItem = self.cart.items.find(function(existingItem){ return sku.id === existingItem.id; });
-			item.id = sku.id;
-			item.price = sku.price;
 
-			if (existingItem){
-				incrementQuantity(existingItem);
-			}
-			else{
-				item.quantity = 1;
-				self.cart.items.push(item);
-				calculateCartTotal();
-			}
+			if (sku.inventory.quantity > 0) {
+				item.id = sku.id;
+				item.price = sku.price;
 
-			enableCheckOut();
+				if (existingItem) {
+					incrementQuantity(existingItem);
+				}
+				else {
+					item.quantity = 1;
+					self.cart.items.push(item);
+					calculateCartTotal();
+				}
+
+				sku.inventory.quantity--;
+				enableCheckOut();
+			}
 		}
 		function removeItemFromCart(item){
 			self.cart.items.splice(self.cart.items.indexOf(item), 1);
@@ -64,6 +68,7 @@
 			calculateCartTotal();
 		}
 		function decrementQuantity(cartItem){
+			cartItem.skus.data[0].inventory.quantity++;
 			if (cartItem.quantity === 1){
 				removeItemFromCart(cartItem);
 			}
@@ -94,11 +99,37 @@
 				resolve();
 			});
 		}
+		function continueShopping(){
+			self.shopping = true;
+			self.checkoutSuccessful = false;
+			resetOrder()
+				.then(function(){
+					self.cart.items = [];
+					self.cart.total = 0;
+					self.cart.itemCount = 0;
+				})
+		}
 
 		//products
 		function setInventoryToSelf(inventory){
 			return $q(function (resolve, reject) {
 				self.inventory = inventory;
+				resolve(inventory);
+			});
+		}
+		function filterOutInactive(inventory){
+			return $q(function (resolve, reject) {
+				var activeItems = inventory.filter(function(item){
+					return item.active;
+				});
+				resolve(activeItems);
+			});
+		}
+		function orderByAttribute(inventory){
+			return $q(function (resolve, reject) {
+				inventory.sort(function(first, second){
+					return parseInt(first.metadata.order) - parseInt(second.metadata.order);
+				});
 				resolve(inventory);
 			});
 		}
@@ -144,7 +175,17 @@
 		function handleOrderCreateError(response){
 			return $q(function (resolve, reject) {
 				stopProcessing()
-					.then(addressInvalid)
+					.then(function(){
+						if (response.code == 'out_of_inventory'){
+							self.createOrderError = "One or more items are out of stock";
+						}
+						else if (response.data.code == 'shipping_calculation_failed') {
+							self.createOrderError = "We could not find your address";
+						}
+						else{
+							self.createOrderError = 'Something went wrong finding shipping options.  You may want to start over.';
+						}
+					})
 					.catch(console.error);
 				reject('bad address');
 			});
@@ -165,6 +206,12 @@
 			return $q(function (resolve, reject) {
 				self.order = order;
 				resolve(order);
+			});
+		}
+		function clearPreviousOrderCreationError(){
+			return $q(function (resolve, reject) {
+				self.createOrderError = null;
+				resolve();
 			});
 		}
 
@@ -236,12 +283,6 @@
 				resolve(self.shippingOptions);
 			});
 		}
-		function addressInvalid(){
-			return $q(function (resolve, reject) {
-				self.addressError = true;
-				resolve();
-			});
-		}
 		function setAddressValid(){
 			return $q(function (resolve, reject) {
 				self.addressError = false;
@@ -250,6 +291,7 @@
 		}
 		function getShippingOptions(){
 			startProcessing()
+				.then(clearPreviousOrderCreationError)
 				.then(cancelAnyPreviousOrder)
 				.then(removePreviousShippingOptions)
 				.then(addCartItemsToOrder)
@@ -309,6 +351,11 @@
 				.then(disableCheckOut)
 				.catch(console.error);
 		}
+		function cancelShipping(){
+			removeShippingFromCart();
+			self.selectingShipping = false;
+			self.shopping = true;
+		}
 
 		//payment
 		function getToken(){
@@ -326,9 +373,9 @@
 					.then(function(error){ reject(error); });
 			});
 		}
-		function handleChargeFailure(result){
+		function handleChargeFailure(error){
 			return $q(function (resolve, reject) {
-				self.paymentErrorMessage = result.error.message;
+				self.paymentErrorMessage = (error && error.data && error.data.message) ? error.data.message : (error && error.message) ? error.message : 'There was an error charging your card.';
 				stopProcessing()
 					.then(allowPayment)
 					.then(reject);
@@ -419,10 +466,15 @@
 		self.getShippingOptions = getShippingOptions;
 		self.selectShipping = selectShipping;
 		self.cancelOrder = cancelPayment;
+		self.cancelShipping = cancelShipping;
+		self.continueShopping = continueShopping;
 
 		//init
-		stripeService.getInventory()
+		startProcessing()
+			.then(stripeService.getInventory)
+			.then(orderByAttribute)
 			.then(setInventoryToSelf)
+			.then(stopProcessing)
 			.catch(console.error);
 
 		var thisYear = new Date().getFullYear(),

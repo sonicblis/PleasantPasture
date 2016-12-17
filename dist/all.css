@@ -264,9 +264,22 @@ console ui-view {
   overflow: auto;
   vertical-align: top;
 }
+error {
+  color: maroon;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: solid 1px #ccc;
+  background: #eee;
+  border-radius: 4px;
+  display: block;
+}
+error i {
+  margin-right: 3px;
+}
 store {
   overflow: auto;
   display: block;
+  position: relative;
 }
 store store-info {
   float: left;
@@ -312,21 +325,6 @@ store store-info card-info {
   float: left;
   overflow: hidden;
   display: inline-block;
-}
-store store-info shipping .error,
-store store-info card-info .error,
-store store-info shipping payment-error,
-store store-info card-info payment-error {
-  color: maroon;
-  margin-top: 4px;
-}
-store store-info shipping payment-error,
-store store-info card-info payment-error {
-  padding: 8px 10px;
-  border: solid 1px #ccc;
-  background: #eee;
-  border-radius: 4px;
-  display: block;
 }
 store store-info shipping form,
 store store-info card-info form {
@@ -438,6 +436,9 @@ store store-info confirmation {
   display: inline-block;
   width: 450px;
 }
+store store-info confirmation button {
+  margin-top: 20px;
+}
 store actions {
   display: block;
   border-top: solid 1px #ccc;
@@ -483,6 +484,10 @@ store cart-items {
   display: block;
   width: 227px;
   vertical-align: top;
+}
+store cart-items.fixed {
+  position: fixed;
+  top: 0;
 }
 store cart-items cart {
   display: inline-block;
