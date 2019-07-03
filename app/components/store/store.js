@@ -2,13 +2,21 @@
 	angular.module('pleasantPastureApp')
 		.component('store', {
 			templateUrl: 'app/components/store/store.html',
-			controller: ['stripeService', '$q', '$rootScope', StoreController],
+			controller: ['stripeService', '$q', '$rootScope', storeController],
 			controllerAs: 'storeController'
 		});
 
-	function StoreController(stripeService, $q, root) {
+	function storeController(stripeService, $q, root) {
 		var self = this,
-			handler = null;
+			pickupShippingOption = {
+				"id": "pickup",
+				"amount": 0,
+				"currency": "usd",
+				"delivery_estimate": {
+					"type": "exact"
+				},
+				"description": "Pick it up"
+			};
 
 		function notifyOfSuccess(){
 			return $q(function (resolve) {
@@ -115,14 +123,6 @@
 			return $q(function (resolve, reject) {
 				self.inventory = inventory;
 				resolve(inventory);
-			});
-		}
-		function filterOutInactive(inventory){
-			return $q(function (resolve, reject) {
-				var activeItems = inventory.filter(function(item){
-					return item.active;
-				});
-				resolve(activeItems);
 			});
 		}
 		function orderByAttribute(inventory){
@@ -253,6 +253,16 @@
 				resolve(shippingOptions);
 			});
 		}
+		function addPickupShippingOption(shippingOptions){
+			return $q(function (resolve, reject) {
+				var pickupDate = new Date();
+				pickupDate.setDate(pickupDate.getDate() + 1);
+				pickupShippingOption.delivery_estimate.date = pickupDate;
+				shippingOptions.push(pickupShippingOption);
+				self.order.shipping_methods.push(pickupShippingOption);
+				resolve(shippingOptions);
+			});
+		}
 		function unblockShippingSelection(){
 			return $q(function (resolve, reject) {
 				self.updatingShipping = false;
@@ -299,6 +309,7 @@
 				.then(setOrderToSelf, handleOrderCreateError)
 				.then(fixCrappyShippingOptions)
 				.then(addTwoDaysToShippingDates)
+				//.then(addPickupShippingOption)
 				.then(setShippingOptionsToSelf)
 				.then(setAddressValid)
 				.then(stopProcessing)
@@ -352,9 +363,11 @@
 				.catch(console.error);
 		}
 		function cancelShipping(){
-			removeShippingFromCart();
+			self.canCheckOut = true;
+			self.canPay = false;
 			self.selectingShipping = false;
 			self.shopping = true;
+			removeShippingFromCart();
 		}
 
 		//payment
@@ -470,12 +483,14 @@
 		self.continueShopping = continueShopping;
 
 		//init
+		/*
 		startProcessing()
 			.then(stripeService.getInventory)
 			.then(orderByAttribute)
 			.then(setInventoryToSelf)
 			.then(stopProcessing)
 			.catch(console.error);
+		*/
 
 		var thisYear = new Date().getFullYear(),
 			year = thisYear;

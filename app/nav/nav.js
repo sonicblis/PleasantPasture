@@ -5,6 +5,7 @@
 				restrict: 'E',
 				templateUrl: 'app/nav/nav.html',
 				controller: ['$scope', function ($scope) {
+
 				}]
 			}
 		}]);

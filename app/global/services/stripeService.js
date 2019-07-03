@@ -3,6 +3,7 @@
 		.service('stripeService', ['$q', '$http', 'envService', function($q, $http, envService){
 			stripe.setPublishableKey(envService.getStripePublicKey());
 			var apiBaseUrl = envService.getPleasantPastureAPIUrl();
+
 			function getInventory() {
 				return $q(function (resolve, reject) {
 					$http.get(apiBaseUrl + 'products').then(function(result){

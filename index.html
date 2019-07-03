@@ -33,12 +33,15 @@
 
     <script>
         function checkCartPosition(){
-            if (document.scrollingElement.scrollTop > 648){
-                document.querySelector('#cart').classList.add('fixed');
-                setCartLeft();
-            }
-            else{
-                document.querySelector('#cart').classList.remove('fixed');
+            var cart = document.querySelector('#cart');
+            if (cart) {
+                if (document.scrollingElement.scrollTop > 648) {
+                    cart.classList.add('fixed');
+                    setCartLeft();
+                }
+                else {
+                    document.querySelector('#cart').classList.remove('fixed');
+                }
             }
         }
         function setCartLeft(){
